@@ -12,5 +12,8 @@
   "type": "commonjs",
   "dependencies": {
     "@upstash/redis": "^1.38.0"
+  },
+  "devDependencies": {
+    "vercel": "^54.14.5"
   }
 }

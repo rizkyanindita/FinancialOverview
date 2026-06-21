@@ -60,17 +60,41 @@ const formatRp = (amount) => {
     }).format(amount);
 };
 
+window.formatInputCurrency = function(el) {
+    let raw = el.value.replace(/[^0-9]/g, '');
+    if(raw) {
+        el.value = parseInt(raw, 10).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    } else {
+        el.value = '';
+    }
+};
+
+const parseCurrencyValue = (str) => {
+    if(!str) return 0;
+    return parseFloat(str.toString().replace(/\./g, '')) || 0;
+};
+
+const formatCurrencyValue = (num) => {
+    if(!num) return '';
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+
 const showToast = (msg, isError = false) => {
     const toast = document.getElementById('toast');
     const toastMsg = document.getElementById('toastMsg');
-    const icon = toast.querySelector('i');
+    const icon = document.getElementById('toastIcon');
+    const iconBg = document.getElementById('toastIconBg');
     
     if(isError) {
-        toast.className = toast.className.replace('bg-emerald-600 shadow-emerald-900/20', 'bg-red-600 shadow-red-900/20');
-        icon.className = 'bx bx-error-circle text-xl';
+        toast.classList.add('border-rose-200', 'shadow-sm');
+        toast.classList.remove('border-slate-200');
+        iconBg.className = 'w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 border border-rose-100';
+        icon.className = 'bx bx-error font-bold text-xl';
     } else {
-        toast.className = toast.className.replace('bg-red-600 shadow-red-900/20', 'bg-emerald-600 shadow-emerald-900/20');
-        icon.className = 'bx bx-check-circle text-xl';
+        toast.classList.remove('border-rose-200', 'shadow-sm');
+        toast.classList.add('border-slate-200');
+        iconBg.className = 'w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100';
+        icon.className = 'bx bx-check font-bold text-xl';
     }
     toastMsg.textContent = msg;
     toast.classList.remove('translate-y-20', 'opacity-0');
@@ -105,23 +129,32 @@ window.closeConfirm = function(result) {
 
 // --- Tab Navigation ---
 window.switchTab = function(tabId) {
-    document.querySelectorAll('.nav-btn, .nav-btn-m').forEach(btn => {
-        btn.classList.remove('bg-gray-800', 'text-blue-400');
-        btn.classList.add('text-gray-400');
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('bg-slate-50', 'text-slate-800', 'active');
+        btn.classList.add('text-slate-500');
+    });
+    document.querySelectorAll('.nav-btn-m').forEach(btn => {
+        btn.classList.remove('active', 'text-blue-500');
+        if(btn.id !== 'nav-input-m') {
+            btn.classList.add('text-slate-400');
+        }
     });
     
     // desktop
     const activeBtn = document.getElementById(`nav-${tabId}`);
     if(activeBtn) {
-        activeBtn.classList.remove('text-gray-400');
-        activeBtn.classList.add('bg-gray-800', 'text-blue-400');
+        activeBtn.classList.remove('text-slate-500');
+        activeBtn.classList.add('bg-slate-50', 'text-slate-800', 'active');
     }
     
     // mobile
     const mActiveBtn = document.getElementById(`nav-${tabId}-m`);
     if(mActiveBtn) {
-        mActiveBtn.classList.remove('text-gray-400');
-        mActiveBtn.classList.add('text-blue-400');
+        if(tabId !== 'input') {
+            mActiveBtn.classList.remove('text-slate-400');
+            mActiveBtn.classList.add('text-blue-500');
+        }
+        mActiveBtn.classList.add('active');
     }
 
     document.querySelectorAll('.tab-content').forEach(sec => sec.classList.add('hide'));
@@ -145,12 +178,23 @@ window.changePlannerMonth = function(delta) {
     renderPlanner();
 };
 
+window.setPlannerMonth = function(val) {
+    if (!val) return;
+    const [year, month] = val.split('-');
+    plannerViewingDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+    renderPlanner();
+};
+
 const groupOrder = ['INSTALLMENT', 'BILLS', 'KEBUTUHAN', 'GROCERIES', 'LAINNYA'];
 
 function renderPlanner() {
     const monthKey = getPlannerMonthKey(plannerViewingDate);
     const monthName = plannerViewingDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
     document.getElementById('plannerCurrentMonthStr').innerText = monthName;
+    const monthPicker = document.getElementById('plannerMonthPicker');
+    if (monthPicker) {
+        monthPicker.value = monthKey;
+    }
 
     const tbody = document.getElementById('plannerTableBody');
     const cardContainer = document.getElementById('plannerCardContainer');
@@ -161,10 +205,22 @@ function renderPlanner() {
     let totalDibayar = 0;
 
     const groupedItems = {};
+    let currentMonthItemsCount = 0;
     plannerItems.forEach(item => {
+        if (item.monthKey !== monthKey) return;
+        currentMonthItemsCount++;
         if(!groupedItems[item.group]) groupedItems[item.group] = [];
         groupedItems[item.group].push(item);
     });
+
+    const copyBtn = document.getElementById('btnCopyPlanner');
+    if (copyBtn) {
+        if (currentMonthItemsCount === 0) {
+            copyBtn.classList.remove('hidden');
+        } else {
+            copyBtn.classList.add('hidden');
+        }
+    }
 
     const groupsToRender = [...groupOrder];
     Object.keys(groupedItems).forEach(g => {
@@ -177,13 +233,13 @@ function renderPlanner() {
         // === Desktop: Table Row Header ===
         const headerRow = document.createElement('tr');
         headerRow.innerHTML = `
-            <td colspan="5" class="p-3 bg-blue-500/20 text-blue-400 font-bold uppercase text-center tracking-wider text-sm border-y border-blue-500/30">${groupName}</td>
+            <td colspan="5" class="p-3 bg-slate-50/80 text-slate-400 font-bold uppercase text-center tracking-widest text-xs border-y border-slate-100">${groupName}</td>
         `;
         tbody.appendChild(headerRow);
 
         // === Mobile: Group Header Card ===
         const mGroupHeader = document.createElement('div');
-        mGroupHeader.className = 'bg-blue-500/20 text-blue-400 font-bold uppercase text-center tracking-wider text-xs py-2 px-4 rounded-xl border border-blue-500/30';
+        mGroupHeader.className = 'bg-slate-50/80 text-slate-500 font-bold uppercase text-center tracking-widest text-[10px] py-2 px-4 rounded-xl border border-slate-200 shadow-sm';
         mGroupHeader.innerText = groupName;
         cardContainer.appendChild(mGroupHeader);
 
@@ -200,17 +256,17 @@ function renderPlanner() {
 
             // === Desktop: Table Row ===
             const tr = document.createElement('tr');
-            if(isLunas) tr.classList.add('bg-emerald-900/10');
+            if(isLunas) tr.classList.add('bg-emerald-50/50');
             tr.innerHTML = `
-                <td class="p-3 text-gray-200">${item.name}</td>
-                <td class="p-3 font-medium text-gray-400">${formatRp(item.amount)}</td>
-                <td class="p-3 font-semibold text-emerald-400">${formatRp(amountPaid)}</td>
-                <td class="p-3 font-bold ${isLunas ? 'text-gray-500' : 'text-red-400'}">${formatRp(Math.max(0, sisa))}</td>
-                <td class="p-3 text-center">
+                <td class="p-5 font-bold text-slate-800">${item.name}</td>
+                <td class="p-5 font-semibold text-slate-500">${formatRp(item.amount)}</td>
+                <td class="p-5 font-bold text-emerald-500">${formatRp(amountPaid)}</td>
+                <td class="p-5 font-black ${isLunas ? 'text-slate-400' : 'text-rose-500'}">${formatRp(Math.max(0, sisa))}</td>
+                <td class="p-5 text-center">
                     <div class="flex items-center justify-center gap-2">
-                        ${!isLunas ? `<button onclick="openPayModal('${item.id}', '${item.category}', '${item.name}', ${sisa}, '${monthKey}')" class="px-3 py-1 bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600 hover:text-white rounded-md text-xs font-semibold transition-colors">Bayar</button>` : `<span class="text-xs font-bold text-emerald-500 px-3 py-1">LUNAS</span>`}
-                        <button onclick="editPlannerItem('${item.id}')" class="p-1.5 text-blue-400 hover:bg-gray-800 rounded-md transition-colors" title="Edit"><i class='bx bx-edit'></i></button>
-                        <button onclick="deletePlannerItem('${item.id}')" class="p-1.5 text-red-400 hover:bg-gray-800 rounded-md transition-colors" title="Hapus"><i class='bx bx-trash'></i></button>
+                        ${!isLunas ? `<button onclick="openPayModal('${item.id}', '${item.category}', '${item.name}', ${sisa}, '${monthKey}')" class="px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-500 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm">Bayar</button>` : `<span class="text-[10px] font-black tracking-widest text-emerald-600 px-4 py-2 bg-emerald-50 rounded-xl border border-emerald-100">LUNAS</span>`}
+                        <button onclick="editPlannerItem('${item.id}')" class="w-8 h-8 flex items-center justify-center text-blue-500 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-200" title="Edit"><i class='bx bx-edit text-lg'></i></button>
+                        <button onclick="deletePlannerItem('${item.id}')" class="w-8 h-8 flex items-center justify-center text-rose-500 hover:bg-rose-50 rounded-lg transition-colors border border-transparent hover:border-rose-200" title="Hapus"><i class='bx bx-trash text-lg'></i></button>
                     </div>
                 </td>
             `;
@@ -218,33 +274,33 @@ function renderPlanner() {
 
             // === Mobile: Item Card ===
             const card = document.createElement('div');
-            card.className = `glass-panel rounded-xl p-4 space-y-3 ${isLunas ? 'border-l-4 border-l-emerald-500' : 'border-l-4 border-l-gray-700'}`;
+            card.className = `glass-panel rounded-[1.5rem] p-5 space-y-4 ${isLunas ? 'border-l-4 border-l-emerald-400' : 'border-l-4 border-l-slate-200'}`;
             card.innerHTML = `
                 <div class="flex justify-between items-start">
-                    <h4 class="font-semibold text-gray-100 text-sm">${item.name}</h4>
+                    <h4 class="font-extrabold text-slate-800 text-base">${item.name}</h4>
                     <div class="flex items-center gap-1">
-                        <button onclick="editPlannerItem('${item.id}')" class="p-1.5 text-blue-400 hover:bg-gray-800 rounded-md transition-colors"><i class='bx bx-edit text-base'></i></button>
-                        <button onclick="deletePlannerItem('${item.id}')" class="p-1.5 text-red-400 hover:bg-gray-800 rounded-md transition-colors"><i class='bx bx-trash text-base'></i></button>
+                        <button onclick="editPlannerItem('${item.id}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-colors border border-transparent hover:border-blue-200"><i class='bx bx-edit text-lg'></i></button>
+                        <button onclick="deletePlannerItem('${item.id}')" class="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors border border-transparent hover:border-rose-200"><i class='bx bx-trash text-lg'></i></button>
                     </div>
                 </div>
                 <div class="grid grid-cols-3 gap-2 text-center">
-                    <div class="bg-gray-900/60 rounded-lg p-2">
-                        <p class="text-[9px] text-gray-500 uppercase tracking-wide">Estimasi</p>
-                        <p class="text-xs font-semibold text-gray-300 mt-0.5">${formatRp(item.amount)}</p>
+                    <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-100">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Estimasi</p>
+                        <p class="text-xs font-bold text-slate-700 mt-1">${formatRp(item.amount)}</p>
                     </div>
-                    <div class="bg-gray-900/60 rounded-lg p-2">
-                        <p class="text-[9px] text-emerald-500 uppercase tracking-wide">Dibayar</p>
-                        <p class="text-xs font-semibold text-emerald-400 mt-0.5">${formatRp(amountPaid)}</p>
+                    <div class="bg-emerald-50 rounded-xl p-2.5 border border-emerald-100">
+                        <p class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Dibayar</p>
+                        <p class="text-xs font-bold text-emerald-500 mt-1">${formatRp(amountPaid)}</p>
                     </div>
-                    <div class="bg-gray-900/60 rounded-lg p-2">
-                        <p class="text-[9px] ${isLunas ? 'text-gray-500' : 'text-red-500'} uppercase tracking-wide">Sisa</p>
-                        <p class="text-xs font-bold ${isLunas ? 'text-gray-500' : 'text-red-400'} mt-0.5">${formatRp(Math.max(0, sisa))}</p>
+                    <div class="${isLunas ? 'bg-slate-50' : 'bg-rose-50'} rounded-xl p-2.5 border ${isLunas ? 'border-slate-100' : 'border-rose-100'}">
+                        <p class="text-[9px] font-bold ${isLunas ? 'text-slate-400' : 'text-rose-500'} uppercase tracking-widest">Sisa</p>
+                        <p class="text-xs font-black ${isLunas ? 'text-slate-400' : 'text-rose-500'} mt-1">${formatRp(Math.max(0, sisa))}</p>
                     </div>
                 </div>
-                <div class="pt-1">
+                <div class="pt-2">
                     ${!isLunas 
-                        ? `<button onclick="openPayModal('${item.id}', '${item.category}', '${item.name}', ${sisa}, '${monthKey}')" class="w-full py-2 bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600 hover:text-white rounded-lg text-xs font-semibold transition-colors">💰 Bayar</button>` 
-                        : `<div class="w-full py-2 bg-emerald-900/20 text-emerald-500 rounded-lg text-xs font-bold text-center">✅ LUNAS</div>`}
+                        ? `<button onclick="openPayModal('${item.id}', '${item.category}', '${item.name}', ${sisa}, '${monthKey}')" class="w-full py-3 bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-500 hover:text-white rounded-xl text-xs font-bold tracking-wide transition-all shadow-sm">💰 Bayar Tagihan</button>` 
+                        : `<div class="w-full py-3 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-xl text-xs font-black tracking-widest text-center shadow-inner">✅ LUNAS</div>`}
                 </div>
             `;
             cardContainer.appendChild(card);
@@ -279,7 +335,7 @@ window.editPlannerItem = function(id) {
         document.getElementById('crudPlannerId').value = item.id;
         document.getElementById('crudPlannerGroup').value = item.group;
         document.getElementById('crudPlannerName').value = item.name;
-        document.getElementById('crudPlannerAmount').value = item.amount;
+        document.getElementById('crudPlannerAmount').value = formatCurrencyValue(item.amount);
         document.getElementById('modalPlannerCrudTitle').innerText = 'Edit Tagihan Rutin';
         document.getElementById('modalPlannerCrud').classList.remove('hidden');
     }
@@ -301,27 +357,58 @@ window.deletePlannerItem = function(id) {
     });
 };
 
+window.copyPlannerFromPreviousMonth = function() {
+    const currentMonthKey = getPlannerMonthKey(plannerViewingDate);
+    
+    // Calculate previous month key
+    const prevDate = new Date(plannerViewingDate);
+    prevDate.setMonth(prevDate.getMonth() - 1);
+    const prevMonthKey = getPlannerMonthKey(prevDate);
+
+    const prevItems = plannerItems.filter(p => p.monthKey === prevMonthKey);
+    
+    if (prevItems.length === 0) {
+        showToast('Tidak ada data di bulan sebelumnya untuk disalin.', true);
+        return;
+    }
+
+    // Duplicate them with new IDs
+    const newItems = prevItems.map((item, idx) => ({
+        ...item,
+        id: 'p_' + Date.now().toString() + '_' + idx,
+        monthKey: currentMonthKey
+    }));
+
+    plannerItems = [...plannerItems, ...newItems];
+
+    saveDataToCloud().then(() => {
+        renderPlanner();
+        showToast('Template berhasil disalin!');
+    });
+};
+
 document.getElementById('formPlannerCrud').addEventListener('submit', (e) => {
     e.preventDefault();
     const id = document.getElementById('crudPlannerId').value;
     const group = document.getElementById('crudPlannerGroup').value;
     const name = document.getElementById('crudPlannerName').value;
-    const amount = parseFloat(document.getElementById('crudPlannerAmount').value);
+    const amount = parseCurrencyValue(document.getElementById('crudPlannerAmount').value);
     
     // Auto-map category based on group
     const catMap = { 'INSTALLMENT': 'Installment', 'BILLS': 'Bills', 'KEBUTUHAN': 'Kebutuhan', 'GROCERIES': 'Groceries' };
     const category = catMap[group] || 'Lainnya';
+    const monthKey = getPlannerMonthKey(plannerViewingDate);
 
     if(id) {
         const idx = plannerItems.findIndex(p => p.id === id);
         if(idx > -1) {
-            plannerItems[idx] = { ...plannerItems[idx], group, name, amount, category };
+            plannerItems[idx] = { ...plannerItems[idx], group, name, amount, category, monthKey };
             showToast('Item diperbarui!');
         }
     } else {
         plannerItems.push({
             id: 'p_' + Date.now().toString(),
-            group, name, amount, category
+            group, name, amount, category, monthKey
         });
     }
     
@@ -339,7 +426,7 @@ window.openPayModal = function(id, category, name, sisaAmount, monthKey) {
     document.getElementById('payPlannerMonthKey').value = monthKey;
     
     document.getElementById('payPlannerSubtitle').innerText = name;
-    document.getElementById('payPlannerAmount').value = sisaAmount;
+    document.getElementById('payPlannerAmount').value = formatCurrencyValue(sisaAmount);
     
     document.getElementById('modalPayPlanner').classList.remove('hidden');
     // Focus the input
@@ -356,7 +443,7 @@ document.getElementById('formPayPlanner').addEventListener('submit', (e) => {
     const category = document.getElementById('payPlannerCategory').value;
     const name = document.getElementById('payPlannerName').value;
     const monthKey = document.getElementById('payPlannerMonthKey').value;
-    const amountPaid = parseFloat(document.getElementById('payPlannerAmount').value);
+    const amountPaid = parseCurrencyValue(document.getElementById('payPlannerAmount').value);
 
     const now = new Date();
     const viewingMonth = parseInt(monthKey.split('-')[1]) - 1;
@@ -391,7 +478,7 @@ document.getElementById('expenseForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const id = document.getElementById('editId').value;
     const date = document.getElementById('inpDate').value;
-    const amount = parseFloat(document.getElementById('inpAmount').value);
+    const amount = parseCurrencyValue(document.getElementById('inpAmount').value);
     const category = document.querySelector('input[name="category"]:checked').value;
     const desc = document.getElementById('inpDesc').value || '-';
 
@@ -436,7 +523,7 @@ window.editExpense = function(id) {
     if(ex) {
         document.getElementById('editId').value = ex.id;
         document.getElementById('inpDate').value = ex.date;
-        document.getElementById('inpAmount').value = ex.amount;
+        document.getElementById('inpAmount').value = formatCurrencyValue(ex.amount);
         document.getElementById('inpDesc').value = ex.desc === '-' ? '' : ex.desc;
         const radio = document.querySelector(`input[name="category"][value="${ex.category}"]`);
         if(radio) radio.checked = true;
@@ -483,11 +570,11 @@ function updateDateDisplay() {
         const offset = [0, -1, -2][i];
         const compare = new Date(today); compare.setDate(compare.getDate() + offset);
         if(selected && selected.getTime() === compare.getTime()) {
-            btn.classList.remove('border-gray-700', 'bg-gray-800', 'text-gray-300');
-            btn.classList.add('border-blue-500', 'bg-blue-600/20', 'text-blue-400');
+            btn.classList.remove('border-slate-200', 'bg-white', 'text-slate-600', 'hover:bg-slate-50', 'hover:text-slate-800');
+            btn.classList.add('border-blue-200', 'bg-blue-50', 'text-blue-600');
         } else {
-            btn.classList.remove('border-blue-500', 'bg-blue-600/20', 'text-blue-400');
-            btn.classList.add('border-gray-700', 'bg-gray-800', 'text-gray-300');
+            btn.classList.remove('border-blue-200', 'bg-blue-50', 'text-blue-600');
+            btn.classList.add('border-slate-200', 'bg-white', 'text-slate-600', 'hover:bg-slate-50', 'hover:text-slate-800');
         }
     });
 }
@@ -505,13 +592,13 @@ document.getElementById('inpDate').addEventListener('change', updateDateDisplay)
 
 // --- Render Logic: History ---
 const catColors = {
-    'Installment': 'text-orange-400 bg-orange-500/10 border-orange-500/20',
-    'Bills': 'text-red-400 bg-red-500/10 border-red-500/20',
-    'Kebutuhan': 'text-blue-400 bg-blue-500/10 border-blue-500/20',
-    'Groceries': 'text-purple-400 bg-purple-500/10 border-purple-500/20',
-    'Dana Darurat': 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
-    'Tabungan Liburan': 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
-    'Lainnya': 'text-gray-300 bg-gray-500/10 border-gray-500/20',
+    'Installment': 'text-orange-600 bg-orange-50 border-orange-200 shadow-sm',
+    'Bills': 'text-red-600 bg-red-50 border-red-200 shadow-sm',
+    'Kebutuhan': 'text-blue-600 bg-blue-50 border-blue-200 shadow-sm',
+    'Groceries': 'text-purple-600 bg-purple-50 border-purple-200 shadow-sm',
+    'Dana Darurat': 'text-emerald-600 bg-emerald-50 border-emerald-200 shadow-sm',
+    'Tabungan Liburan': 'text-sky-600 bg-sky-50 border-sky-200 shadow-sm',
+    'Lainnya': 'text-slate-700 bg-slate-100 border-slate-300 shadow-sm',
 };
 
 function renderHistory() {
@@ -542,32 +629,32 @@ function renderHistory() {
         const displayDate = new Date(ex.date + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
         
         const card = document.createElement('div');
-        card.className = "glass-panel p-4 md:p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 border border-gray-800 hover:border-gray-700 transition-colors";
+        card.className = "glass-panel p-5 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4 border border-slate-100 hover:border-slate-200 transition-all hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 group";
         
         card.innerHTML = `
             <div class="flex items-start md:items-center gap-4">
-                <div class="hidden md:flex flex-shrink-0 w-12 h-12 bg-gray-900 rounded-xl items-center justify-center border border-gray-800">
-                    <span class="text-xl">💰</span>
+                <div class="flex flex-shrink-0 w-12 h-12 bg-slate-50 rounded-2xl items-center justify-center border border-slate-100 shadow-sm">
+                    <span class="text-xl">${isPlanner ? '📋' : '💸'}</span>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2 mb-1">
-                        <span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded border ${colorClass}">${ex.category}</span>
-                        <span class="text-xs text-gray-400">${displayDate}</span>
+                    <div class="flex items-center gap-2 mb-1.5">
+                        <span class="px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-lg border ${colorClass}">${ex.category}</span>
+                        <span class="text-xs font-semibold text-slate-400">${displayDate}</span>
                     </div>
-                    <p class="font-semibold text-gray-100 truncate text-sm md:text-base flex items-center gap-1">
-                        ${isPlanner} ${ex.desc}
+                    <p class="font-extrabold text-slate-800 truncate text-base flex items-center gap-1.5">
+                        ${ex.desc}
                     </p>
                 </div>
             </div>
             
-            <div class="flex items-center justify-between md:flex-col md:items-end gap-2 border-t md:border-t-0 border-gray-800/50 pt-3 md:pt-0">
-                <span class="font-bold text-gray-100 text-base md:text-lg">${formatRp(ex.amount)}</span>
-                <div class="flex items-center gap-1">
-                    <button onclick="editExpense('${ex.id}')" class="p-2 text-blue-400 bg-gray-900 md:bg-transparent hover:bg-gray-800 rounded-lg transition-colors border border-gray-800 md:border-none">
-                        <i class='bx bx-edit-alt'></i>
+            <div class="flex items-center justify-between md:flex-col md:items-end gap-3 border-t md:border-t-0 border-slate-100 pt-4 md:pt-0">
+                <span class="font-black text-slate-800 text-lg tracking-tight">${formatRp(ex.amount)}</span>
+                <div class="flex items-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onclick="editExpense('${ex.id}')" class="w-8 h-8 flex items-center justify-center text-blue-500 bg-white hover:bg-blue-50 rounded-xl transition-all border border-slate-200 hover:border-blue-200">
+                        <i class='bx bx-edit-alt text-lg'></i>
                     </button>
-                    <button onclick="deleteExpense('${ex.id}')" class="p-2 text-red-400 bg-gray-900 md:bg-transparent hover:bg-gray-800 rounded-lg transition-colors border border-gray-800 md:border-none">
-                        <i class='bx bx-trash'></i>
+                    <button onclick="deleteExpense('${ex.id}')" class="w-8 h-8 flex items-center justify-center text-rose-500 bg-white hover:bg-rose-50 rounded-xl transition-all border border-slate-200 hover:border-rose-200">
+                        <i class='bx bx-trash text-lg'></i>
                     </button>
                 </div>
             </div>
@@ -577,8 +664,8 @@ function renderHistory() {
 }
 
 // --- Dashboard & Charts Logic ---
-Chart.defaults.color = '#9ca3af';
-Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#64748b';
+Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
 
 let catChartIns, compChartIns, weekChartIns;
 
@@ -623,15 +710,15 @@ function renderMonthly() {
     const trendBadge = document.getElementById('trendBadge');
     if(totalLastM === 0) {
         trendBadge.innerText = 'N/A';
-        trendBadge.className = 'text-xs font-semibold bg-gray-500/20 text-gray-400 px-2 py-1 rounded-md';
+        trendBadge.className = 'text-xs font-bold bg-slate-100 border border-slate-200 text-slate-500 px-2 py-1 rounded-md shadow-sm';
     } else {
         const diff = totalThisM - totalLastM;
         const pct = Math.abs((diff / totalLastM) * 100).toFixed(1);
         if(diff > 0) {
-            trendBadge.className = 'text-xs font-semibold bg-red-500/20 text-red-400 px-2 py-1 rounded-md';
+            trendBadge.className = 'text-xs font-bold bg-rose-50 border border-rose-200 text-rose-500 px-2 py-1 rounded-md shadow-sm';
             trendBadge.innerHTML = `<i class='bx bx-trending-up'></i> Naik ${pct}%`;
         } else {
-            trendBadge.className = 'text-xs font-semibold bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-md';
+            trendBadge.className = 'text-xs font-bold bg-emerald-50 border border-emerald-200 text-emerald-600 px-2 py-1 rounded-md shadow-sm';
             trendBadge.innerHTML = `<i class='bx bx-trending-down'></i> Turun ${pct}%`;
         }
     }
@@ -744,14 +831,14 @@ function renderWeekly() {
     const listHtml = Object.entries(catSums).sort((a,b)=>b[1]-a[1]).map(([cat, amt]) => {
         const colorClass = catColors[cat] || catColors['Lainnya'];
         return `
-            <div class="flex justify-between items-center p-4 bg-gray-900/50 rounded-xl border border-gray-800">
-                <span class="px-3 py-1.5 text-sm font-medium rounded-lg border ${colorClass}">${cat}</span>
-                <span class="font-bold text-gray-100">${formatRp(amt)}</span>
+            <div class="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
+                <span class="px-3 py-1.5 text-sm font-bold rounded-lg border ${colorClass}">${cat}</span>
+                <span class="font-black text-slate-800">${formatRp(amt)}</span>
             </div>
         `;
     }).join('');
     
-    document.getElementById('weeklyCategoryList').innerHTML = listHtml || '<p class="text-gray-500 text-sm italic">Belum ada pengeluaran minggu ini.</p>';
+    document.getElementById('weeklyCategoryList').innerHTML = listHtml || '<p class="text-slate-500 text-sm font-medium italic">Belum ada pengeluaran minggu ini.</p>';
 }
 
 // --- Export CSV ---
@@ -814,6 +901,7 @@ window.openPlannerPreview = function() {
 
     const groupedItems = {};
     plannerItems.forEach(item => {
+        if (item.monthKey !== monthKey) return;
         if(!groupedItems[item.group]) groupedItems[item.group] = [];
         groupedItems[item.group].push(item);
     });
@@ -843,15 +931,15 @@ window.openPlannerPreview = function() {
             isLunas ? lunasCount++ : belumCount++;
 
             const row = document.createElement('div');
-            row.className = `flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl ${isLunas ? 'bg-emerald-900/20 border border-emerald-500/20' : 'bg-gray-800/50 border border-gray-700/50'}`;
+            row.className = `flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl ${isLunas ? 'bg-emerald-50 border border-emerald-100' : 'bg-white border border-slate-200 shadow-sm'}`;
             row.innerHTML = `
                 <div class="flex items-center gap-2 min-w-0">
-                    <i class='bx ${isLunas ? 'bx-check-circle text-emerald-400' : 'bx-circle text-gray-500'} text-lg flex-shrink-0'></i>
-                    <span class="text-sm text-gray-200 truncate">${item.name}</span>
+                    <i class='bx ${isLunas ? 'bx-check-circle text-emerald-500' : 'bx-circle text-slate-300'} text-lg flex-shrink-0'></i>
+                    <span class="text-sm font-semibold text-slate-800 truncate">${item.name}</span>
                 </div>
                 <div class="text-right flex-shrink-0">
-                    <p class="text-xs font-semibold ${isLunas ? 'text-emerald-400' : 'text-red-400'}">${isLunas ? 'LUNAS' : formatRp(sisa)}</p>
-                    <p class="text-[10px] text-gray-500">${formatRp(item.amount)}</p>
+                    <p class="text-xs font-black ${isLunas ? 'text-emerald-500' : 'text-rose-500'}">${isLunas ? 'LUNAS' : formatRp(sisa)}</p>
+                    <p class="text-[10px] text-slate-400 font-bold">${formatRp(item.amount)}</p>
                 </div>
             `;
             listEl.appendChild(row);
@@ -903,6 +991,19 @@ window.addEventListener('DOMContentLoaded', async () => {
             
             expenses = data.expenses || [];
             plannerItems = data.plannerItems || [];
+            
+            // MIGRATION: Auto-assign existing items without monthKey to current active month
+            let needsMigration = false;
+            const currentMonthKey = getPlannerMonthKey(new Date());
+            plannerItems.forEach(item => {
+                if (!item.monthKey) {
+                    item.monthKey = currentMonthKey;
+                    needsMigration = true;
+                }
+            });
+            if (needsMigration) {
+                await saveDataToCloud();
+            }
             
             // MIGRATION LOGIC: Check if Upstash is empty but localStorage has old data
             if (expenses.length === 0 && plannerItems.length === 0) {
