@@ -344,9 +344,15 @@
                             <button onclick="changePlannerMonth(1)" class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors relative z-10"><i class='bx bx-chevron-right text-xl'></i></button>
                         </div>
                         <button onclick="openPlannerPreview()" class="flex-1 md:flex-none flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition-all text-sm font-bold border border-slate-200 shadow-sm hover:shadow-md">
-                            <i class='bx bx-grid-alt text-lg text-primary'></i> Ringkasan
+                            <i class='bx bx-grid-alt text-lg text-primary'></i> <span class="hidden md:inline">Ringkasan</span>
                         </button>
-                        <button onclick="openPlannerModal()" class="flex-none flex justify-center items-center gap-2 px-5 py-3 bg-gradient-to-r from-sky-400 to-blue-500 hover:opacity-90 text-white rounded-xl transition-all text-sm font-bold shadow-lg shadow-blue-500/30">
+                        <button onclick="copyPlannerFromPreviousMonth()" title="Salin dari Bulan Lalu" class="flex-none flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition-all text-sm font-bold border border-slate-200 shadow-sm hover:shadow-md">
+                            <i class='bx bx-copy text-lg text-blue-500'></i> <span class="hidden md:inline">Salin sebelumnya</span>
+                        </button>
+                        <button onclick="deleteAllPlannerItems()" title="Hapus Semua di Bulan Ini" class="flex-none flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-rose-50 text-rose-500 rounded-xl transition-all text-sm font-bold border border-rose-200 shadow-sm hover:shadow-md">
+                            <i class='bx bx-trash text-lg'></i> <span class="hidden md:inline">Hapus Semua</span>
+                        </button>
+                        <button onclick="openPlannerModal()" class="flex-1 md:flex-none flex justify-center items-center gap-2 px-5 py-3 bg-gradient-to-r from-sky-400 to-blue-500 hover:opacity-90 text-white rounded-xl transition-all text-sm font-bold shadow-lg shadow-blue-500/30">
                             <i class='bx bx-plus text-lg'></i> Baru
                         </button>
                     </div>
@@ -380,17 +386,17 @@
                             <tbody id="plannerTableBody" class="divide-y divide-slate-100 text-sm">
                                 <!-- Populated via JS -->
                             </tbody>
-                            <tfoot class="bg-slate-50 border-t border-slate-200">
-                                <tr class="text-slate-600 font-semibold">
-                                    <td colspan="4" class="p-5 text-right uppercase tracking-wider text-xs font-bold">Total Estimasi Planner</td>
-                                    <td class="p-5 text-right text-base text-slate-800 font-bold" id="plannerTotalEstimasi">Rp 0</td>
+                            <tfoot class="border-t border-slate-200">
+                                <tr class="bg-blue-50 text-blue-700 font-bold border-t border-blue-100">
+                                    <td colspan="4" class="p-5 text-right uppercase tracking-wider text-xs">Total Estimasi Planner</td>
+                                    <td class="p-5 text-right text-base font-black" id="plannerTotalEstimasi">Rp 0</td>
                                 </tr>
-                                <tr class="bg-emerald-50 text-emerald-600 font-semibold border-t border-emerald-100">
-                                    <td colspan="4" class="p-5 text-right uppercase tracking-wider text-xs font-bold">Sudah Dibayar (Bulan Ini)</td>
-                                    <td class="p-5 text-right text-base font-bold" id="plannerTotalDibayar">Rp 0</td>
+                                <tr class="bg-emerald-50 text-emerald-700 font-bold border-t border-emerald-100">
+                                    <td colspan="4" class="p-5 text-right uppercase tracking-wider text-xs">Sudah Dibayar (Bulan Ini)</td>
+                                    <td class="p-5 text-right text-base font-black" id="plannerTotalDibayar">Rp 0</td>
                                 </tr>
-                                <tr class="bg-rose-50 text-rose-500 font-bold border-t border-rose-100">
-                                    <td colspan="4" class="p-5 text-right uppercase tracking-wider text-xs font-bold">Sisa Belum Dibayar</td>
+                                <tr class="bg-rose-50 text-rose-700 font-bold border-t border-rose-100">
+                                    <td colspan="4" class="p-5 text-right uppercase tracking-wider text-xs">Sisa Belum Dibayar</td>
                                     <td class="p-5 text-right text-lg font-black" id="plannerSisa">Rp 0</td>
                                 </tr>
                             </tfoot>
@@ -399,18 +405,18 @@
                 </div>
 
                 <!-- Mobile Summary Footer -->
-                <div id="plannerMobileSummary" class="md:hidden glass-panel rounded-3xl p-5 space-y-3 mt-6">
-                    <div class="flex justify-between items-center">
-                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Total Estimasi</span>
-                        <span class="font-bold text-slate-800 text-sm" id="plannerTotalEstimasiM">Rp 0</span>
+                <div id="plannerMobileSummary" class="md:hidden glass-panel rounded-3xl p-4 space-y-3 mt-6">
+                    <div class="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100">
+                        <span class="text-[11px] font-black text-blue-700 uppercase tracking-widest">Total Estimasi</span>
+                        <span class="font-black text-blue-700 text-sm" id="plannerTotalEstimasiM">Rp 0</span>
                     </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-[11px] font-bold text-emerald-500 uppercase tracking-widest">Sudah Dibayar</span>
-                        <span class="font-bold text-emerald-500 text-sm" id="plannerTotalDibayarM">Rp 0</span>
+                    <div class="flex justify-between items-center bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                        <span class="text-[11px] font-black text-emerald-700 uppercase tracking-widest">Sudah Dibayar</span>
+                        <span class="font-black text-emerald-700 text-sm" id="plannerTotalDibayarM">Rp 0</span>
                     </div>
-                    <div class="flex justify-between items-center border-t border-slate-100 pt-3 mt-1">
-                        <span class="text-xs font-black text-rose-500 uppercase tracking-widest">Sisa Kewajiban</span>
-                        <span class="font-black text-rose-500 text-base" id="plannerSisaM">Rp 0</span>
+                    <div class="flex justify-between items-center bg-rose-50 p-3 rounded-xl border border-rose-100 mt-2">
+                        <span class="text-xs font-black text-rose-700 uppercase tracking-widest">Sisa Kewajiban</span>
+                        <span class="font-black text-rose-700 text-base" id="plannerSisaM">Rp 0</span>
                     </div>
                 </div>
             </section>

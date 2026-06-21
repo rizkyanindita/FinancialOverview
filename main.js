@@ -387,6 +387,29 @@ window.copyPlannerFromPreviousMonth = function() {
     });
 };
 
+window.deleteAllPlannerItems = function() {
+    const currentMonthKey = getPlannerMonthKey(plannerViewingDate);
+    const monthItems = plannerItems.filter(p => p.monthKey === currentMonthKey);
+    
+    if (monthItems.length === 0) {
+        showToast('Tidak ada tagihan untuk dihapus di bulan ini.', true);
+        return;
+    }
+
+    showConfirm({
+        title: 'Hapus Semua Tagihan',
+        message: 'Apakah Anda yakin ingin menghapus SEMUA tagihan pada bulan ini? Aksi ini tidak dapat dibatalkan.',
+        okLabel: 'Hapus Semua',
+    }, (confirmed) => {
+        if (!confirmed) return;
+        plannerItems = plannerItems.filter(p => p.monthKey !== currentMonthKey);
+        saveDataToCloud().then(() => {
+            renderPlanner();
+            showToast('Semua tagihan bulan ini berhasil dihapus!');
+        });
+    });
+};
+
 document.getElementById('formPlannerCrud').addEventListener('submit', (e) => {
     e.preventDefault();
     const id = document.getElementById('crudPlannerId').value;
