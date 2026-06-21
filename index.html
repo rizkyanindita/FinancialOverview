@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#030712">
+    <title>Personal Finance Tracker</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        gray: { 850: '#1f2937', 900: '#111827', 950: '#030712' },
+                        primary: '#3b82f6',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Boxicons -->
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom Utilities */
+        .glass-panel {
+            background: rgba(31, 41, 55, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .hide { display: none !important; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        
+        /* Mobile specific touches */
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+            .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 font-sans antialiased min-h-screen flex flex-col md:flex-row pb-20 md:pb-0">
+
+    <!-- Global Loading Overlay -->
+    <div id="globalLoader" class="fixed inset-0 z-[400] bg-gray-950 flex flex-col items-center justify-center hidden">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+        <p class="text-blue-400 font-medium animate-pulse" id="globalLoaderText">Menyiapkan data...</p>
+    </div>
+
+    <!-- Main Content Wrapper -->
+    <div id="appContainer" class="w-full min-h-screen flex flex-col md:flex-row pb-20 md:pb-0">
+
+    <!-- Mobile Top Header (Appears only on mobile) -->
+    <div class="md:hidden glass-panel flex justify-between items-center p-4 sticky top-0 z-[60] border-b border-gray-800">
+        <div class="flex items-center gap-2">
+            <div class="bg-blue-600 p-1.5 rounded-lg"><i class='bx bx-wallet text-lg text-white'></i></div>
+            <h1 class="text-lg font-bold tracking-tight">Keuangan Rahma</h1>
+        </div>
+    </div>
+
+    <!-- Desktop Sidebar Navigation -->
+    <nav class="hidden md:flex w-64 glass-panel flex-shrink-0 h-screen sticky top-0 z-50 flex-col border-r border-gray-800">
+        <div class="p-6 flex items-center gap-3">
+            <div class="bg-blue-600 p-2 rounded-lg"><i class='bx bx-wallet text-xl text-white'></i></div>
+            <h1 class="text-xl font-bold tracking-tight">FinTracker</h1>
+        </div>
+        <ul class="flex flex-col gap-1 p-4 flex-1">
+            <li>
+                <button onclick="switchTab('monthly')" id="nav-monthly" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-gray-400 hover:bg-gray-800 hover:text-white">
+                    <i class='bx bxs-dashboard text-xl'></i>
+                    <span class="font-medium">Monthly Dashboard</span>
+                </button>
+            </li>
+            <li>
+                <button onclick="switchTab('weekly')" id="nav-weekly" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-gray-400 hover:bg-gray-800 hover:text-white">
+                    <i class='bx bx-calendar-week text-xl'></i>
+                    <span class="font-medium">Weekly Tracking</span>
+                </button>
+            </li>
+            <li>
+                <button onclick="switchTab('planner')" id="nav-planner" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-gray-400 hover:bg-gray-800 hover:text-white">
+                    <i class='bx bx-list-check text-xl'></i>
+                    <span class="font-medium">Planner Rutin</span>
+                </button>
+            </li>
+            <li>
+                <button onclick="switchTab('input')" id="nav-input" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-gray-400 hover:bg-gray-800 hover:text-white">
+                    <i class='bx bx-plus-circle text-xl'></i>
+                    <span class="font-medium">Input Expense</span>
+                </button>
+            </li>
+            <li>
+                <button onclick="switchTab('history')" id="nav-history" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-gray-400 hover:bg-gray-800 hover:text-white">
+                    <i class='bx bx-table text-xl'></i>
+                    <span class="font-medium">Data Management</span>
+                </button>
+            </li>
+        </ul>
+        <div class="p-6 border-t border-gray-800">
+            <button onclick="exportCSV()" class="w-full flex justify-center items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors text-sm font-medium border border-gray-700">
+                <i class='bx bx-export'></i> Export CSV
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="md:hidden fixed bottom-0 left-0 w-full glass-panel border-t border-gray-800 z-[60] flex justify-around p-2 pb-safe">
+        <button onclick="switchTab('monthly')" id="nav-monthly-m" class="nav-btn-m flex flex-col items-center justify-center p-2 rounded-lg text-gray-400 w-16">
+            <i class='bx bxs-dashboard text-2xl'></i>
+            <span class="text-[10px] font-medium mt-1">Dash</span>
+        </button>
+        <button onclick="switchTab('weekly')" id="nav-weekly-m" class="nav-btn-m flex flex-col items-center justify-center p-2 rounded-lg text-gray-400 w-16">
+            <i class='bx bx-calendar-week text-2xl'></i>
+            <span class="text-[10px] font-medium mt-1">Weekly</span>
+        </button>
+        <button onclick="switchTab('planner')" id="nav-planner-m" class="nav-btn-m flex flex-col items-center justify-center p-2 rounded-lg text-gray-400 w-16">
+            <i class='bx bx-list-check text-2xl'></i>
+            <span class="text-[10px] font-medium mt-1">Planner</span>
+        </button>
+        <button onclick="switchTab('input')" id="nav-input-m" class="nav-btn-m flex flex-col items-center justify-center p-2 rounded-lg text-gray-400 w-16">
+            <i class='bx bx-plus-circle text-2xl'></i>
+            <span class="text-[10px] font-medium mt-1">Input</span>
+        </button>
+        <button onclick="switchTab('history')" id="nav-history-m" class="nav-btn-m flex flex-col items-center justify-center p-2 rounded-lg text-gray-400 w-16">
+            <i class='bx bx-table text-2xl'></i>
+            <span class="text-[10px] font-medium mt-1">History</span>
+        </button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-4 md:p-8 overflow-y-auto w-full max-w-7xl mx-auto">
+        
+        <!-- ==================== MONTHLY DASHBOARD TAB ==================== -->
+        <section id="tab-monthly" class="tab-content block space-y-4 md:space-y-6">
+            <header class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-2 md:mb-6">
+                <div>
+                    <h2 class="text-xl md:text-3xl font-bold">Monthly Overview</h2>
+                    <p class="text-gray-400 text-xs md:text-sm mt-1">Ringkasan pengeluaran bulan ini.</p>
+                </div>
+                <div class="text-left md:text-right bg-gray-800/50 px-4 py-3 rounded-xl border border-gray-700">
+                    <p class="text-[10px] md:text-xs text-gray-400 uppercase tracking-wide">Total Pengeluaran Bulan Ini</p>
+                    <h3 class="text-2xl md:text-3xl font-bold text-red-400 mt-1" id="moTotalExpense">Rp 0</h3>
+                </div>
+            </header>
+
+            <!-- Cards Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+                <!-- Dana Darurat -->
+                <div class="glass-panel p-4 md:p-5 rounded-2xl">
+                    <div class="flex justify-between items-start mb-3 md:mb-4">
+                        <div class="bg-emerald-500/20 p-2 md:p-3 rounded-xl text-emerald-400"><i class='bx bx-shield-plus text-xl md:text-2xl'></i></div>
+                        <span class="text-[10px] md:text-xs font-semibold bg-gray-800 px-2 py-1 rounded-md text-gray-400 hidden sm:block">Tujuan</span>
+                    </div>
+                    <p class="text-gray-400 text-xs md:text-sm font-medium">Dana Darurat</p>
+                    <h3 class="text-lg md:text-2xl font-bold text-gray-100 mt-1" id="moDanaDarurat">Rp 0</h3>
+                </div>
+                <!-- Liburan -->
+                <div class="glass-panel p-4 md:p-5 rounded-2xl">
+                    <div class="flex justify-between items-start mb-3 md:mb-4">
+                        <div class="bg-blue-500/20 p-2 md:p-3 rounded-xl text-blue-400"><i class='bx bx-paper-plane text-xl md:text-2xl'></i></div>
+                        <span class="text-[10px] md:text-xs font-semibold bg-gray-800 px-2 py-1 rounded-md text-gray-400 hidden sm:block">Tujuan</span>
+                    </div>
+                    <p class="text-gray-400 text-xs md:text-sm font-medium">Tabungan Liburan</p>
+                    <h3 class="text-lg md:text-2xl font-bold text-gray-100 mt-1" id="moLiburan">Rp 0</h3>
+                </div>
+                <!-- Comparison -->
+                <div class="glass-panel p-4 md:p-5 rounded-2xl border-l-4 border-l-purple-500 col-span-2 md:col-span-1">
+                    <div class="flex justify-between items-start mb-3 md:mb-4">
+                        <div class="bg-purple-500/20 p-2 md:p-3 rounded-xl text-purple-400"><i class='bx bx-line-chart-down text-xl md:text-2xl'></i></div>
+                        <span id="trendBadge" class="text-[10px] md:text-xs font-semibold bg-red-500/20 text-red-400 px-2 py-1 rounded-md">Naik 0%</span>
+                    </div>
+                    <p class="text-gray-400 text-xs md:text-sm font-medium">Bulan Lalu (vs Bulan Ini)</p>
+                    <h3 class="text-lg md:text-2xl font-bold text-gray-100 mt-1" id="moLastMonth">Rp 0</h3>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                <!-- Doughnut Chart -->
+                <div class="glass-panel p-4 md:p-6 rounded-2xl">
+                    <h3 class="text-base md:text-lg font-semibold mb-4">Breakdown Kategori</h3>
+                    <div class="relative h-48 md:h-64 w-full flex justify-center">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+                <!-- Comparison Bar Chart -->
+                <div class="glass-panel p-4 md:p-6 rounded-2xl">
+                    <h3 class="text-base md:text-lg font-semibold mb-4">Bulan Ini vs Bulan Lalu</h3>
+                    <div class="relative h-48 md:h-64 w-full">
+                        <canvas id="comparisonChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== WEEKLY TRACKING TAB ==================== -->
+        <section id="tab-weekly" class="tab-content hide space-y-4 md:space-y-6">
+            <header class="mb-4 md:mb-6">
+                <h2 class="text-xl md:text-3xl font-bold">Weekly Tracking</h2>
+                <p class="text-gray-400 text-xs md:text-sm mt-1">Pengeluaran 7 hari terakhir (Senin - Minggu).</p>
+            </header>
+
+            <div class="glass-panel p-4 md:p-6 rounded-2xl mb-4 md:mb-6">
+                <div class="flex justify-between items-center mb-4 md:mb-6">
+                    <h3 class="text-base md:text-lg font-semibold">Summary Minggu Ini</h3>
+                    <div class="text-right">
+                        <p class="text-[10px] md:text-sm text-gray-400">Total Minggu Ini</p>
+                        <h4 class="text-xl md:text-2xl font-bold text-red-400" id="wkTotal">Rp 0</h4>
+                    </div>
+                </div>
+                <div class="relative h-48 md:h-64 w-full">
+                    <canvas id="weeklyChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="glass-panel p-4 md:p-6 rounded-2xl">
+                <h3 class="text-base md:text-lg font-semibold mb-4">Pengeluaran Mingguan per Kategori</h3>
+                <div class="space-y-3" id="weeklyCategoryList">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== PLANNER TAB ==================== -->
+        <section id="tab-planner" class="tab-content hide space-y-4 md:space-y-6">
+            <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 md:mb-6">
+                <div>
+                    <h2 class="text-xl md:text-3xl font-bold">Planner Rutin</h2>
+                    <p class="text-gray-400 text-xs md:text-sm mt-1" id="plannerMonthLabel">Atur dan bayar tagihan rutin.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <button onclick="openPlannerModal()" class="flex-1 md:flex-none flex justify-center items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium border border-blue-500 shadow-lg shadow-blue-500/20">
+                        <i class='bx bx-plus'></i> Tambah
+                    </button>
+                    <button onclick="openPlannerPreview()" class="flex-1 md:flex-none flex justify-center items-center gap-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg transition-colors text-sm font-medium border border-gray-700">
+                        <i class='bx bx-grid-alt'></i> Ringkasan
+                    </button>
+                    <div class="flex w-full md:w-auto justify-between items-center gap-2 bg-gray-800/50 px-3 py-2 rounded-lg border border-gray-700">
+                        <button onclick="changePlannerMonth(-1)" class="p-1 hover:bg-gray-700 rounded"><i class='bx bx-chevron-left text-lg'></i></button>
+                        <span id="plannerCurrentMonthStr" class="font-semibold text-blue-400 text-sm md:text-base w-24 text-center">Juni 2026</span>
+                        <button onclick="changePlannerMonth(1)" class="p-1 hover:bg-gray-700 rounded"><i class='bx bx-chevron-right text-lg'></i></button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Mobile Card Layout -->
+            <div id="plannerCardContainer" class="md:hidden space-y-4">
+                <!-- Populated via JS -->
+            </div>
+
+            <!-- Desktop Table Layout -->
+            <div class="hidden md:block glass-panel rounded-2xl overflow-hidden border border-gray-800">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse whitespace-nowrap">
+                        <thead>
+                            <tr class="bg-gray-900/80 border-b border-gray-800 text-gray-400 text-sm uppercase tracking-wider">
+                                <th class="p-4 font-medium w-1/3">Item Tagihan</th>
+                                <th class="p-4 font-medium">Estimasi</th>
+                                <th class="p-4 font-medium">Dibayar</th>
+                                <th class="p-4 font-medium">Sisa</th>
+                                <th class="p-4 font-medium text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="plannerTableBody" class="divide-y divide-gray-800/50 text-sm">
+                            <!-- Populated via JS -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-gray-800/80 text-gray-300 font-semibold border-t-2 border-gray-700">
+                                <td colspan="4" class="p-4 text-right uppercase tracking-wider text-xs">Total Estimasi Planner</td>
+                                <td class="p-4 text-right text-sm" id="plannerTotalEstimasi">Rp 0</td>
+                            </tr>
+                            <tr class="bg-emerald-500/10 text-emerald-400 font-semibold">
+                                <td colspan="4" class="p-4 text-right uppercase tracking-wider text-xs">Sudah Dibayar (Bulan Ini)</td>
+                                <td class="p-4 text-right text-sm" id="plannerTotalDibayar">Rp 0</td>
+                            </tr>
+                            <tr class="bg-red-500/10 text-red-400 font-bold border-t border-red-500/30">
+                                <td colspan="4" class="p-4 text-right uppercase tracking-wider text-xs">Sisa Belum Dibayar</td>
+                                <td class="p-4 text-right text-sm" id="plannerSisa">Rp 0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Mobile Summary Footer -->
+            <div id="plannerMobileSummary" class="md:hidden glass-panel rounded-2xl p-4 space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-400 uppercase tracking-wider">Estimasi</span>
+                    <span class="font-semibold text-gray-200 text-sm" id="plannerTotalEstimasiM">Rp 0</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-emerald-400 uppercase tracking-wider">Dibayar</span>
+                    <span class="font-semibold text-emerald-400 text-sm" id="plannerTotalDibayarM">Rp 0</span>
+                </div>
+                <div class="flex justify-between items-center border-t border-gray-700 pt-2">
+                    <span class="text-xs text-red-400 uppercase tracking-wider font-bold">Sisa</span>
+                    <span class="font-bold text-red-400 text-sm" id="plannerSisaM">Rp 0</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== INPUT EXPENSE TAB ==================== -->
+        <section id="tab-input" class="tab-content hide">
+            <div class="max-w-2xl mx-auto">
+                <header class="mb-4 md:mb-6 text-center">
+                    <h2 class="text-xl md:text-2xl font-bold">Catat Transaksi Manual</h2>
+                    <p class="text-gray-400 text-xs md:text-sm mt-1">Masukkan data pengeluaran selain yang ada di Planner Rutin.</p>
+                </header>
+
+                <form id="expenseForm" class="glass-panel p-5 md:p-8 rounded-2xl space-y-4 md:space-y-6">
+                    <input type="hidden" id="editId" value="">
+                    
+                    <!-- Tanggal Section -->
+                    <div>
+                        <label class="block text-xs md:text-sm font-medium text-gray-400 mb-2">Tanggal Transaksi</label>
+                        
+                        <!-- Quick Select Buttons -->
+                        <div class="grid grid-cols-3 gap-2 mb-3">
+                            <button type="button" onclick="setQuickDate(0)" class="quick-date-btn px-3 py-2.5 border border-blue-500 bg-blue-600/20 text-blue-400 rounded-xl text-xs md:text-sm font-semibold transition-all active:scale-95 text-center">
+                                📅 Hari Ini
+                            </button>
+                            <button type="button" onclick="setQuickDate(-1)" class="quick-date-btn px-3 py-2.5 border border-gray-700 bg-gray-800 text-gray-300 rounded-xl text-xs md:text-sm font-medium transition-all active:scale-95 hover:bg-gray-700 text-center">
+                                ⏪ Kemarin
+                            </button>
+                            <button type="button" onclick="setQuickDate(-2)" class="quick-date-btn px-3 py-2.5 border border-gray-700 bg-gray-800 text-gray-300 rounded-xl text-xs md:text-sm font-medium transition-all active:scale-95 hover:bg-gray-700 text-center">
+                                ⏮️ 2 Hari Lalu
+                            </button>
+                        </div>
+                        
+                        <!-- Date Display + Hidden Native Picker -->
+                        <div class="relative">
+                            <input type="date" id="inpDate" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                            <div id="dateDisplay" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-medium flex items-center justify-between pointer-events-none">
+                                <span>Selasa, 17 Juni 2026</span>
+                            </div>
+                            <div class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                                <i class='bx bx-calendar text-lg'></i>
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-gray-500 mt-1.5">Ketuk untuk memilih tanggal lain.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                        <!-- placeholder to keep grid alignment -->
+                        <div class="hidden md:block"></div>
+                        
+                        <!-- Nominal -->
+                        <div>
+                            <label class="block text-xs md:text-sm font-medium text-gray-400 mb-1.5">Nominal (Rp)</label>
+                            <input type="number" id="inpAmount" placeholder="Contoh: 50000" required min="1" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 md:py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Kategori -->
+                    <div>
+                        <label class="block text-xs md:text-sm font-medium text-gray-400 mb-2">Kategori Utama</label>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="category" value="Installment" class="peer sr-only">
+                                <div class="p-2 md:p-3 border border-gray-700 rounded-xl text-center hover:bg-gray-800 peer-checked:bg-orange-600/20 peer-checked:border-orange-500 peer-checked:text-orange-400 transition-all text-[11px] md:text-sm font-medium text-gray-300">
+                                    💳 Installment
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="category" value="Bills" class="peer sr-only">
+                                <div class="p-2 md:p-3 border border-gray-700 rounded-xl text-center hover:bg-gray-800 peer-checked:bg-red-600/20 peer-checked:border-red-500 peer-checked:text-red-400 transition-all text-[11px] md:text-sm font-medium text-gray-300">
+                                    🧾 Bills
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="category" value="Kebutuhan" class="peer sr-only" checked>
+                                <div class="p-2 md:p-3 border border-gray-700 rounded-xl text-center hover:bg-gray-800 peer-checked:bg-blue-600/20 peer-checked:border-blue-500 peer-checked:text-blue-400 transition-all text-[11px] md:text-sm font-medium text-gray-300">
+                                    🛒 Kebutuhan
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="category" value="Groceries" class="peer sr-only">
+                                <div class="p-2 md:p-3 border border-gray-700 rounded-xl text-center hover:bg-gray-800 peer-checked:bg-purple-600/20 peer-checked:border-purple-500 peer-checked:text-purple-400 transition-all text-[11px] md:text-sm font-medium text-gray-300">
+                                    🛍️ Groceries
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="category" value="Dana Darurat" class="peer sr-only">
+                                <div class="p-2 md:p-3 border border-gray-700 rounded-xl text-center hover:bg-gray-800 peer-checked:bg-emerald-600/20 peer-checked:border-emerald-500 peer-checked:text-emerald-400 transition-all text-[11px] md:text-sm font-medium text-gray-300">
+                                    🛡️ Darurat
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="category" value="Tabungan Liburan" class="peer sr-only">
+                                <div class="p-2 md:p-3 border border-gray-700 rounded-xl text-center hover:bg-gray-800 peer-checked:bg-cyan-600/20 peer-checked:border-cyan-500 peer-checked:text-cyan-400 transition-all text-[11px] md:text-sm font-medium text-gray-300">
+                                    ✈️ Liburan
+                                </div>
+                            </label>
+                            <label class="cursor-pointer col-span-2 md:col-span-1">
+                                <input type="radio" name="category" value="Lainnya" class="peer sr-only">
+                                <div class="p-2 md:p-3 border border-gray-700 rounded-xl text-center hover:bg-gray-800 peer-checked:bg-gray-600/40 peer-checked:border-gray-400 peer-checked:text-white transition-all text-[11px] md:text-sm font-medium text-gray-300">
+                                    📝 Lainnya
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Deskripsi -->
+                    <div>
+                        <label class="block text-xs md:text-sm font-medium text-gray-400 mb-1.5">Deskripsi Singkat</label>
+                        <input type="text" id="inpDesc" placeholder="Contoh: Beli makan siang dadakan..." class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 md:py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors text-sm">
+                    </div>
+
+                    <div class="pt-2 md:pt-4 flex flex-col md:flex-row gap-3 md:gap-4">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 md:py-3 px-4 rounded-xl shadow-lg shadow-blue-500/30 transition-all active:scale-95 text-sm md:text-base">
+                            Simpan Transaksi
+                        </button>
+                        <button type="button" id="btnCancelEdit" onclick="cancelEdit()" class="w-full md:w-auto hidden bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-xl transition-all text-sm md:text-base">
+                            Batal
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- ==================== HISTORY / DATA MANAGEMENT TAB ==================== -->
+        <section id="tab-history" class="tab-content hide space-y-4 md:space-y-6">
+            <header class="mb-6 md:mb-8 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+                <div>
+                    <h2 class="text-xl md:text-3xl font-bold">Data Management</h2>
+                    <p class="text-gray-400 text-xs md:text-sm mt-1">Riwayat transaksi manual & Planner.</p>
+                </div>
+                
+                <div class="flex flex-col md:flex-row gap-2 md:gap-3 items-end">
+                    <!-- Filter By Date -->
+                    <div class="w-auto self-start md:self-auto">
+                        <label class="block text-xs text-gray-400 mb-1">Filter Tanggal</label>
+                        <input type="date" id="historyDateFilter" onchange="renderHistory()" class="bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors">
+                    </div>
+                    
+                    <button onclick="exportCSV()" class="md:hidden w-full flex justify-center items-center gap-2 px-4 py-2.5 bg-gray-800 text-white rounded-xl border border-gray-700 text-sm font-medium">
+                        <i class='bx bx-export'></i> Export to CSV
+                    </button>
+                    <button onclick="clearAllExpenses()" class="w-full md:w-auto flex justify-center items-center gap-2 px-4 py-2.5 bg-red-600/20 text-red-400 rounded-xl border border-red-500/30 text-sm font-medium hover:bg-red-600 hover:text-white transition-colors">
+                        <i class='bx bx-trash'></i> Clear All Data
+                    </button>
+                </div>
+            </header>
+
+            <!-- Mobile-Friendly Card Layout for History -->
+            <div id="historyList" class="space-y-3">
+                <!-- Populated via JS -->
+            </div>
+            
+            <div id="emptyState" class="hidden glass-panel rounded-2xl p-6 md:p-8 text-center text-gray-500 border border-gray-800 mt-4">
+                <i class='bx bx-folder-open text-3xl md:text-4xl mb-2'></i>
+                <p class="text-sm">Belum ada data transaksi.</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal CRUD Planner -->
+    <div id="modalPlannerCrud" class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm hidden flex items-end md:items-center justify-center p-0 md:p-4 pb-safe">
+        <!-- added slide up animation for mobile feel -->
+        <form id="formPlannerCrud" class="glass-panel w-full max-w-md bg-gray-900 rounded-t-3xl md:rounded-2xl p-6 md:p-8 shadow-2xl relative border border-gray-700 animate-[translate-y_0.3s_ease-out]">
+            <!-- drag handle indicator on mobile -->
+            <div class="w-12 h-1.5 bg-gray-700 rounded-full mx-auto mb-6 md:hidden"></div>
+            
+            <h3 class="text-lg md:text-xl font-bold mb-4" id="modalPlannerCrudTitle">Tambah Tagihan Rutin</h3>
+            <input type="hidden" id="crudPlannerId">
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs md:text-sm font-medium text-gray-400 mb-1">Grup Tagihan</label>
+                    <select id="crudPlannerGroup" required class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 text-sm">
+                        <option value="INSTALLMENT">Installment</option>
+                        <option value="BILLS">Bills</option>
+                        <option value="KEBUTUHAN">Kebutuhan</option>
+                        <option value="GROCERIES">Groceries</option>
+                        <option value="LAINNYA">Lainnya</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs md:text-sm font-medium text-gray-400 mb-1">Nama Item</label>
+                    <input type="text" id="crudPlannerName" required placeholder="Contoh: Bensin, Galon..." class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs md:text-sm font-medium text-gray-400 mb-1">Estimasi Harga (Rp)</label>
+                    <input type="number" id="crudPlannerAmount" required placeholder="Contoh: 75000" min="1" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 text-sm">
+                </div>
+            </div>
+            
+            <div class="mt-8 flex gap-3">
+                <button type="button" onclick="closePlannerModal()" class="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-medium py-3 rounded-xl border border-gray-700 text-sm">Batal</button>
+                <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl text-sm">Simpan</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Modal Pay Planner (Partial Payment) -->
+    <div id="modalPayPlanner" class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm hidden flex items-end md:items-center justify-center p-0 md:p-4 pb-safe">
+        <form id="formPayPlanner" class="glass-panel w-full max-w-sm bg-gray-900 rounded-t-3xl md:rounded-2xl p-6 md:p-8 shadow-2xl relative border border-gray-700">
+            <!-- drag handle indicator on mobile -->
+            <div class="w-12 h-1.5 bg-gray-700 rounded-full mx-auto mb-6 md:hidden"></div>
+            
+            <h3 class="text-lg md:text-xl font-bold mb-1">Bayar Tagihan</h3>
+            <p class="text-xs md:text-sm text-gray-400 mb-6" id="payPlannerSubtitle">Item Name</p>
+            
+            <input type="hidden" id="payPlannerId">
+            <input type="hidden" id="payPlannerCategory">
+            <input type="hidden" id="payPlannerName">
+            <input type="hidden" id="payPlannerMonthKey">
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs md:text-sm font-medium text-gray-400 mb-1.5">Nominal Dibayar (Rp)</label>
+                    <input type="number" id="payPlannerAmount" required min="1" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-4 text-2xl font-bold text-white focus:outline-none focus:border-emerald-500 text-center">
+                    <p class="text-center text-[11px] md:text-xs text-gray-500 mt-2">Ubah angka jika bayar sebagian.</p>
+                </div>
+            </div>
+            
+            <div class="mt-8 flex gap-3">
+                <button type="button" onclick="closePayModal()" class="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-medium py-3 rounded-xl border border-gray-700 text-sm">Batal</button>
+                <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 rounded-xl shadow-lg shadow-emerald-500/20 text-sm">Konfirmasi</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Custom Confirm Modal -->
+    <div id="modalConfirm" class="fixed inset-0 z-[300] bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-sm bg-gray-900 rounded-2xl p-6 shadow-2xl border border-gray-700">
+            <div class="flex items-center gap-3 mb-3">
+                <div id="confirmIcon" class="bg-red-500/20 p-2.5 rounded-xl text-red-400 flex-shrink-0">
+                    <i class='bx bx-error text-xl'></i>
+                </div>
+                <h3 id="confirmTitle" class="text-lg font-bold">Konfirmasi</h3>
+            </div>
+            <p id="confirmMessage" class="text-gray-400 text-sm mb-6 leading-relaxed">Apakah Anda yakin?</p>
+            <div class="flex gap-3">
+                <button onclick="closeConfirm(false)" class="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-medium py-2.5 rounded-xl border border-gray-700 text-sm transition-colors">Batal</button>
+                <button id="confirmOkBtn" onclick="closeConfirm(true)" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded-xl text-sm transition-colors">Hapus</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Planner Preview Sheet -->
+    <div id="modalPlannerPreview" class="fixed inset-0 z-[150] bg-black/70 backdrop-blur-sm hidden items-end md:items-center justify-center p-0 md:p-4">
+        <div class="glass-panel w-full max-w-lg bg-gray-900 rounded-t-3xl md:rounded-2xl border border-gray-700 shadow-2xl flex flex-col" style="max-height:85vh">
+            <div class="flex items-center justify-between p-5 border-b border-gray-800 flex-shrink-0">
+                <div>
+                    <h3 class="text-lg font-bold">Ringkasan Planner</h3>
+                    <p class="text-xs text-gray-400 mt-0.5" id="previewMonthLabel">Juni 2026</p>
+                </div>
+                <button onclick="closePlannerPreview()" class="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
+                    <i class='bx bx-x text-2xl'></i>
+                </button>
+            </div>
+            <!-- Progress bars summary -->
+            <div class="p-4 border-b border-gray-800 grid grid-cols-3 gap-3 flex-shrink-0">
+                <div class="bg-gray-800/60 rounded-xl p-3 text-center">
+                    <p class="text-[10px] text-gray-400 uppercase tracking-wide">Total Estimasi</p>
+                    <p class="font-bold text-white text-sm mt-1" id="pvTotalEstimasi">Rp 0</p>
+                </div>
+                <div class="bg-emerald-500/10 rounded-xl p-3 text-center">
+                    <p class="text-[10px] text-emerald-400 uppercase tracking-wide">Lunas</p>
+                    <p class="font-bold text-emerald-400 text-sm mt-1" id="pvLunas">0 item</p>
+                </div>
+                <div class="bg-red-500/10 rounded-xl p-3 text-center">
+                    <p class="text-[10px] text-red-400 uppercase tracking-wide">Belum</p>
+                    <p class="font-bold text-red-400 text-sm mt-1" id="pvBelum">0 item</p>
+                </div>
+            </div>
+            <!-- Progress bar -->
+            <div class="px-4 pb-3 flex-shrink-0">
+                <div class="flex justify-between text-xs text-gray-400 mb-1.5 mt-3">
+                    <span>Progress Pembayaran</span>
+                    <span id="pvPercent">0%</span>
+                </div>
+                <div class="w-full bg-gray-800 rounded-full h-2.5">
+                    <div id="pvProgressBar" class="bg-emerald-500 h-2.5 rounded-full transition-all duration-500" style="width:0%"></div>
+                </div>
+            </div>
+            <!-- Scrollable item list -->
+            <div class="overflow-y-auto flex-1 p-4 space-y-2" id="previewItemList">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-[80px] md:bottom-4 right-4 md:right-4 left-4 md:left-auto bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-lg shadow-emerald-900/20 transform translate-y-20 opacity-0 transition-all duration-300 z-[200] flex items-center gap-2 pointer-events-none justify-center md:justify-start">
+        <i class='bx bx-check-circle text-xl'></i>
+        <span id="toastMsg" class="font-medium text-sm">Tersimpan!</span>
+    </div>
+
+    <script src="main.js"></script>
+    </div> <!-- End of appContainer -->
+</body>
+</html>
