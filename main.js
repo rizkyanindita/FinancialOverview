@@ -904,10 +904,28 @@ window.addEventListener('DOMContentLoaded', async () => {
             expenses = data.expenses || [];
             plannerItems = data.plannerItems || [];
             
-            // If completely empty (first time ever), init with templates
-            if(plannerItems.length === 0) {
-                plannerItems = [...defaultPlannerTemplate];
-                await saveDataToCloud();
+            // MIGRATION LOGIC: Check if Upstash is empty but localStorage has old data
+            if (expenses.length === 0 && plannerItems.length === 0) {
+                const localExpenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+                const localPlanner = JSON.parse(localStorage.getItem('plannerItems') || '[]');
+                
+                if (localExpenses.length > 0 || localPlanner.length > 0) {
+                    console.log('Migrating old localStorage data to Upstash...');
+                    expenses = localExpenses;
+                    plannerItems = localPlanner.length > 0 ? localPlanner : [...defaultPlannerTemplate];
+                    
+                    // Upload to Upstash
+                    await saveDataToCloud();
+                    
+                    // Optional: clear localStorage after successful migration
+                    // localStorage.removeItem('expenses');
+                    // localStorage.removeItem('plannerItems');
+                    showToast('Data lama berhasil dipindahkan ke Cloud!', false);
+                } else {
+                    // Completely empty (first time ever), init with templates
+                    plannerItems = [...defaultPlannerTemplate];
+                    await saveDataToCloud();
+                }
             }
 
             setQuickDate(0);
