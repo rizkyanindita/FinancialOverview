@@ -142,7 +142,13 @@
 
         <ul class="flex flex-col gap-1.5 px-4 flex-1">
             <li>
-                <button onclick="switchTab('monthly')" id="nav-monthly" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative active">
+                <button onclick="switchTab('beranda')" id="nav-beranda" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative active">
+                    <i class='bx bxs-home text-xl'></i>
+                    <span class="font-bold text-sm">Beranda</span>
+                </button>
+            </li>
+            <li>
+                <button onclick="switchTab('monthly')" id="nav-monthly" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative">
                     <i class='bx bxs-dashboard text-xl'></i>
                     <span class="font-bold text-sm">Monthly Dashboard</span>
                 </button>
@@ -181,9 +187,9 @@
 
     <!-- Mobile Floating Bottom Navigation -->
     <nav class="md:hidden fixed bottom-5 left-4 right-4 glass-nav z-[60] flex justify-around p-2 rounded-2xl shadow-xl shadow-slate-300/50">
-        <button onclick="switchTab('monthly')" id="nav-monthly-m" class="nav-btn-m active relative flex flex-col items-center justify-center p-2 text-slate-400 w-14 transition-all">
-            <i class='bx bxs-dashboard text-2xl mb-1'></i>
-            <span class="text-[9px] font-bold tracking-wide">Dash</span>
+        <button onclick="switchTab('beranda')" id="nav-beranda-m" class="nav-btn-m active relative flex flex-col items-center justify-center p-2 text-slate-400 w-14 transition-all">
+            <i class='bx bxs-home text-2xl mb-1'></i>
+            <span class="text-[9px] font-bold tracking-wide">Beranda</span>
         </button>
         <button onclick="switchTab('weekly')" id="nav-weekly-m" class="nav-btn-m relative flex flex-col items-center justify-center p-2 text-slate-400 w-14 transition-all">
             <i class='bx bx-line-chart text-2xl mb-1'></i>
@@ -214,9 +220,51 @@
         <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-100/30 rounded-full blur-[80px] pointer-events-none z-0"></div>
 
         <div class="relative z-10 max-w-7xl mx-auto">
-            
+
+            <!-- ==================== BERANDA TAB ==================== -->
+            <section id="tab-beranda" class="tab-content block">
+                <div class="max-w-2xl mx-auto mt-2 md:mt-8">
+                    <header class="mb-6 md:mb-8 text-center">
+                        <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-800">Halo, <span class="text-gradient">Rahma</span> 👋</h2>
+                        <p class="text-slate-500 text-sm font-medium mt-1">Begini kondisi keuangan bulan ini.</p>
+                    </header>
+
+                    <!-- Hero: Sisa Uang Bulan Ini -->
+                    <div class="glass-panel rounded-[2rem] p-8 md:p-10 text-center shadow-xl shadow-slate-200/50">
+                        <p class="text-xs md:text-sm text-slate-400 uppercase tracking-widest font-bold mb-3">Sisa Uang Bulan Ini</p>
+                        <h1 id="berandaSisa" class="text-4xl md:text-6xl font-black tracking-tight text-slate-800">Rp 0</h1>
+                    </div>
+
+                    <!-- 3 Angka Pendukung -->
+                    <div class="grid grid-cols-3 gap-3 md:gap-4 mt-5">
+                        <div class="glass-panel rounded-2xl p-4 md:p-5 text-center">
+                            <p class="text-[10px] md:text-xs text-emerald-600 uppercase tracking-widest font-bold mb-1.5">Masuk</p>
+                            <p id="berandaMasuk" class="text-sm md:text-lg font-extrabold text-slate-800 tracking-tight">Rp 0</p>
+                        </div>
+                        <div class="glass-panel rounded-2xl p-4 md:p-5 text-center">
+                            <p class="text-[10px] md:text-xs text-rose-500 uppercase tracking-widest font-bold mb-1.5">Keluar</p>
+                            <p id="berandaKeluar" class="text-sm md:text-lg font-extrabold text-slate-800 tracking-tight">Rp 0</p>
+                        </div>
+                        <div class="glass-panel rounded-2xl p-4 md:p-5 text-center">
+                            <p class="text-[10px] md:text-xs text-sky-600 uppercase tracking-widest font-bold mb-1.5">Nabung</p>
+                            <p id="berandaNabung" class="text-sm md:text-lg font-extrabold text-slate-800 tracking-tight">Rp 0</p>
+                        </div>
+                    </div>
+
+                    <!-- CTA Utama -->
+                    <button onclick="goCatatPengeluaran()" class="w-full mt-8 bg-primary hover:bg-blue-600 text-white font-bold py-5 rounded-2xl shadow-lg shadow-blue-500/30 transition-all active:scale-[0.98] text-base md:text-lg">
+                        💸 Catat Pengeluaran
+                    </button>
+
+                    <!-- CTA Sekunder -->
+                    <button onclick="switchTab('monthly')" class="w-full mt-3 bg-white hover:bg-slate-50 text-slate-600 font-bold py-3.5 rounded-xl border border-slate-200 shadow-sm transition-all text-sm">
+                        📊 Lihat Analisis Bulanan
+                    </button>
+                </div>
+            </section>
+
             <!-- ==================== MONTHLY DASHBOARD TAB ==================== -->
-            <section id="tab-monthly" class="tab-content block space-y-6 md:space-y-8">
+            <section id="tab-monthly" class="tab-content hide space-y-6 md:space-y-8">
                 <header class="flex flex-col md:flex-row md:justify-between md:items-end gap-5">
                     <div>
                         <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Monthly <span class="text-gradient">Overview</span></h2>
@@ -338,8 +386,8 @@
                         <div class="flex flex-1 md:flex-none justify-between items-center gap-2 glass-panel px-3 py-2 rounded-xl shadow-sm relative group cursor-pointer">
                             <button onclick="changePlannerMonth(-1)" class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors relative z-10"><i class='bx bx-chevron-left text-xl'></i></button>
                             <div class="relative flex-1 flex justify-center items-center">
-                                <input type="month" id="plannerMonthPicker" onchange="setPlannerMonth(this.value)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
-                                <span id="plannerCurrentMonthStr" class="font-bold text-slate-800 text-sm md:text-base w-28 text-center tracking-wide group-hover:text-blue-600 transition-colors">Juni 2026</span>
+                                <input type="month" id="plannerMonthPicker" onchange="setPlannerMonth(this.value)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-0">
+                                <span id="plannerCurrentMonthStr" class="relative z-10 pointer-events-none font-bold text-slate-800 text-sm md:text-base w-28 text-center tracking-wide group-hover:text-blue-600 transition-colors">Juni 2026</span>
                             </div>
                             <button onclick="changePlannerMonth(1)" class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors relative z-10"><i class='bx bx-chevron-right text-xl'></i></button>
                         </div>
@@ -475,12 +523,15 @@
                         <div class="relative z-10">
                             <label class="block text-xs md:text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Jenis Transaksi</label>
                             <input type="hidden" id="inpTxType" value="pengeluaran">
-                            <div class="grid grid-cols-2 gap-3">
-                                <button type="button" id="btnTxPengeluaran" onclick="setTxType('pengeluaran')" class="py-3.5 rounded-xl text-sm font-bold transition-all bg-primary text-white shadow-lg shadow-blue-500/30">
+                            <div class="grid grid-cols-3 gap-2 md:gap-3">
+                                <button type="button" id="btnTxPengeluaran" onclick="setTxType('pengeluaran')" class="py-3.5 rounded-xl text-xs md:text-sm font-bold transition-all bg-primary text-white shadow-lg shadow-blue-500/30">
                                     💸 Pengeluaran
                                 </button>
-                                <button type="button" id="btnTxTabungan" onclick="setTxType('tabungan')" class="py-3.5 rounded-xl text-sm font-bold transition-all bg-white text-slate-600 border border-slate-200">
+                                <button type="button" id="btnTxTabungan" onclick="setTxType('tabungan')" class="py-3.5 rounded-xl text-xs md:text-sm font-bold transition-all bg-white text-slate-600 border border-slate-200">
                                     🏦 Tabungan
+                                </button>
+                                <button type="button" id="btnTxPemasukan" onclick="setTxType('pemasukan')" class="py-3.5 rounded-xl text-xs md:text-sm font-bold transition-all bg-white text-slate-600 border border-slate-200">
+                                    💵 Pemasukan
                                 </button>
                             </div>
                         </div>

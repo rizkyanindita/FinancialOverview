@@ -183,6 +183,7 @@ window.switchTab = function(tabId) {
     document.querySelectorAll('.tab-content').forEach(sec => sec.classList.add('hide'));
     document.getElementById(`tab-${tabId}`).classList.remove('hide');
 
+    if(tabId === 'beranda') renderBeranda();
     if(tabId === 'monthly') renderMonthly();
     if(tabId === 'weekly') renderWeekly();
     if(tabId === 'history') renderHistory();
@@ -525,35 +526,57 @@ window.setTxType = function(type) {
 
     const btnPengeluaran = document.getElementById('btnTxPengeluaran');
     const btnTabungan = document.getElementById('btnTxTabungan');
+    const btnPemasukan = document.getElementById('btnTxPemasukan');
     const gridPengeluaran = document.getElementById('categoryGridPengeluaran');
     const gridTabungan = document.getElementById('categoryGridTabungan');
+    const inpDesc = document.getElementById('inpDesc');
+
+    const activeClasses = {
+        pengeluaran: ['bg-primary', 'text-white', 'shadow-lg', 'shadow-blue-500/30'],
+        tabungan: ['bg-sky-500', 'text-white', 'shadow-lg', 'shadow-sky-500/30'],
+        pemasukan: ['bg-emerald-500', 'text-white', 'shadow-lg', 'shadow-emerald-500/30'],
+    };
+    const inactiveClasses = ['bg-white', 'text-slate-600', 'border', 'border-slate-200'];
+    const buttons = { pengeluaran: btnPengeluaran, tabungan: btnTabungan, pemasukan: btnPemasukan };
+
+    Object.keys(buttons).forEach(key => {
+        const btn = buttons[key];
+        if(key === type) {
+            btn.classList.remove(...inactiveClasses);
+            btn.classList.add(...activeClasses[key]);
+        } else {
+            btn.classList.remove(...activeClasses[key]);
+            btn.classList.add(...inactiveClasses);
+        }
+    });
 
     if(type === 'tabungan') {
-        btnTabungan.classList.add('bg-sky-500', 'text-white', 'shadow-lg', 'shadow-sky-500/30');
-        btnTabungan.classList.remove('bg-white', 'text-slate-600', 'border', 'border-slate-200');
-        btnPengeluaran.classList.remove('bg-primary', 'text-white', 'shadow-lg', 'shadow-blue-500/30');
-        btnPengeluaran.classList.add('bg-white', 'text-slate-600', 'border', 'border-slate-200');
-
         gridTabungan.classList.remove('hide');
         gridPengeluaran.classList.add('hide');
-
-        // Clear category radios in the hidden (pengeluaran) grid, ensure a default is picked in the visible one
         gridPengeluaran.querySelectorAll('input[name="category"]').forEach(r => r.checked = false);
         const firstGoal = gridTabungan.querySelector('input[name="category"]');
         if(firstGoal && !gridTabungan.querySelector('input[name="category"]:checked')) firstGoal.checked = true;
+        inpDesc.placeholder = 'Contoh: Setor Dana Darurat bulanan...';
+    } else if(type === 'pemasukan') {
+        gridPengeluaran.classList.add('hide');
+        gridTabungan.classList.add('hide');
+        gridPengeluaran.querySelectorAll('input[name="category"]').forEach(r => r.checked = false);
+        gridTabungan.querySelectorAll('input[name="category"]').forEach(r => r.checked = false);
+        inpDesc.placeholder = 'Contoh: Gaji bulanan, bonus, THR...';
     } else {
-        btnPengeluaran.classList.add('bg-primary', 'text-white', 'shadow-lg', 'shadow-blue-500/30');
-        btnPengeluaran.classList.remove('bg-white', 'text-slate-600', 'border', 'border-slate-200');
-        btnTabungan.classList.remove('bg-sky-500', 'text-white', 'shadow-lg', 'shadow-sky-500/30');
-        btnTabungan.classList.add('bg-white', 'text-slate-600', 'border', 'border-slate-200');
-
         gridPengeluaran.classList.remove('hide');
         gridTabungan.classList.add('hide');
-
         gridTabungan.querySelectorAll('input[name="category"]').forEach(r => r.checked = false);
         const firstCat = gridPengeluaran.querySelector('input[name="category"]');
         if(firstCat && !gridPengeluaran.querySelector('input[name="category"]:checked')) firstCat.checked = true;
+        inpDesc.placeholder = 'Contoh: Beli makan siang, ongkos...';
     }
+};
+
+// Shortcut dari tombol "Catat Pengeluaran" di Beranda
+window.goCatatPengeluaran = function() {
+    setTxType('pengeluaran');
+    switchTab('input');
 };
 
 document.getElementById('expenseForm').addEventListener('submit', (e) => {
@@ -562,10 +585,15 @@ document.getElementById('expenseForm').addEventListener('submit', (e) => {
     const date = document.getElementById('inpDate').value;
     const amount = parseCurrencyValue(document.getElementById('inpAmount').value);
     const type = document.getElementById('inpTxType').value || 'pengeluaran';
-    const checkedRadio = document.querySelector('input[name="category"]:checked');
-    let category = checkedRadio ? checkedRadio.value : (type === 'tabungan' ? SAVINGS_GOALS[0] : 'Lainnya');
-    if(category === '__custom__') {
-        category = (document.getElementById('inpTujuanCustom').value || 'Tabungan Lainnya').trim();
+    let category;
+    if(type === 'pemasukan') {
+        category = 'Pemasukan';
+    } else {
+        const checkedRadio = document.querySelector('input[name="category"]:checked');
+        category = checkedRadio ? checkedRadio.value : (type === 'tabungan' ? SAVINGS_GOALS[0] : 'Lainnya');
+        if(category === '__custom__') {
+            category = (document.getElementById('inpTujuanCustom').value || 'Tabungan Lainnya').trim();
+        }
     }
     const desc = document.getElementById('inpDesc').value || '-';
 
@@ -585,7 +613,7 @@ document.getElementById('expenseForm').addEventListener('submit', (e) => {
         cancelEdit();
         showToast('Transaksi tersimpan!');
         renderHistory();
-        if(type === 'tabungan') renderMonthly();
+        if(type !== 'pengeluaran') renderMonthly();
     });
 });
 
@@ -613,7 +641,7 @@ window.editExpense = function(id) {
         document.getElementById('inpAmount').value = formatCurrencyValue(ex.amount);
         document.getElementById('inpDesc').value = ex.desc === '-' ? '' : ex.desc;
 
-        const type = ex.type === 'tabungan' ? 'tabungan' : 'pengeluaran';
+        const type = (ex.type === 'tabungan' || ex.type === 'pemasukan') ? ex.type : 'pengeluaran';
         setTxType(type);
 
         const radio = document.querySelector(`input[name="category"][value="${ex.category}"]`);
@@ -700,6 +728,7 @@ const catColors = {
     'Belanja': 'text-purple-600 bg-purple-50 border-purple-200 shadow-sm',
     'Dana Darurat': 'text-emerald-600 bg-emerald-50 border-emerald-200 shadow-sm',
     'Tabungan Liburan': 'text-sky-600 bg-sky-50 border-sky-200 shadow-sm',
+    'Pemasukan': 'text-green-600 bg-green-50 border-green-200 shadow-sm',
     'Lainnya': 'text-slate-700 bg-slate-100 border-slate-300 shadow-sm',
 };
 
@@ -729,9 +758,12 @@ function renderHistory() {
         const colorClass = catColors[ex.category] || catColors['Lainnya'];
         const isPlanner = ex.plannerRef ? '<i class="bx bx-list-check text-blue-400" title="Dari Planner"></i>' : '';
         const isTabungan = ex.type === 'tabungan';
-        const typeBadge = isTabungan
-            ? `<span class="px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-lg border text-sky-600 bg-sky-50 border-sky-200">💰 Tabungan</span>`
-            : `<span class="px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-lg border text-rose-600 bg-rose-50 border-rose-200">💸 Pengeluaran</span>`;
+        const isPemasukan = ex.type === 'pemasukan';
+        const typeBadge = isPemasukan
+            ? `<span class="px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-lg border text-green-600 bg-green-50 border-green-200">💵 Pemasukan</span>`
+            : isTabungan
+                ? `<span class="px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-lg border text-sky-600 bg-sky-50 border-sky-200">💰 Tabungan</span>`
+                : `<span class="px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-lg border text-rose-600 bg-rose-50 border-rose-200">💸 Pengeluaran</span>`;
         const displayDate = new Date(ex.date + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
 
         const card = document.createElement('div');
@@ -740,7 +772,7 @@ function renderHistory() {
         card.innerHTML = `
             <div class="flex items-start md:items-center gap-4">
                 <div class="flex flex-shrink-0 w-12 h-12 bg-slate-50 rounded-2xl items-center justify-center border border-slate-100 shadow-sm">
-                    <span class="text-xl">${isPlanner ? '📋' : (isTabungan ? '🏦' : '💸')}</span>
+                    <span class="text-xl">${isPlanner ? '📋' : (isPemasukan ? '💵' : (isTabungan ? '🏦' : '💸'))}</span>
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -768,6 +800,27 @@ function renderHistory() {
         `;
         listContainer.appendChild(card);
     });
+}
+
+// --- Beranda (Halaman Pembuka) ---
+function renderBeranda() {
+    const currentMonthKey = getPlannerMonthKey(new Date());
+
+    let sumMasuk = 0, sumKeluar = 0, sumNabung = 0;
+    expenses.forEach(ex => {
+        if (!ex.date || !ex.date.startsWith(currentMonthKey)) return;
+        if (ex.type === 'pemasukan') sumMasuk += ex.amount;
+        else if (ex.type === 'tabungan') sumNabung += ex.amount;
+        else sumKeluar += ex.amount; // default: pengeluaran
+    });
+
+    const sisa = sumMasuk - sumKeluar - sumNabung;
+
+    document.getElementById('berandaSisa').innerText = formatRp(sisa);
+    document.getElementById('berandaSisa').className = `text-4xl md:text-6xl font-black tracking-tight ${sisa < 0 ? 'text-rose-500' : 'text-slate-800'}`;
+    document.getElementById('berandaMasuk').innerText = formatRp(sumMasuk);
+    document.getElementById('berandaKeluar').innerText = formatRp(sumKeluar);
+    document.getElementById('berandaNabung').innerText = formatRp(sumNabung);
 }
 
 // --- Dashboard & Charts Logic ---
@@ -800,8 +853,8 @@ function renderMonthly() {
         if(isTabungan && ex.category === 'Dana Darurat') sumDarurat += amt;
         if(isTabungan && ex.category === 'Tabungan Liburan') sumLiburan += amt;
 
-        // Total Pengeluaran HANYA menjumlah jenis "pengeluaran" — tabungan tidak dihitung.
-        if(isTabungan) return;
+        // Total Pengeluaran HANYA menjumlah jenis "pengeluaran" — tabungan & pemasukan tidak dihitung.
+        if(ex.type !== 'pengeluaran') return;
 
         if(d.getMonth() === currM && d.getFullYear() === currY) {
             totalThisM += amt;
@@ -901,7 +954,7 @@ function renderWeekly() {
     const catSums = {};
 
     expenses.forEach(ex => {
-        if(ex.type === 'tabungan') return; // Weekly tracking hanya untuk pengeluaran
+        if(ex.type !== 'pengeluaran') return; // Weekly tracking hanya untuk pengeluaran
         const d = new Date(ex.date);
         if(d >= weekStart && d <= now) {
             const amt = ex.amount;
@@ -1186,7 +1239,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
 
             setQuickDate(0);
-            switchTab('planner');
+            switchTab('beranda');
         }
     } catch(err) {
         showToast('Gagal menghubungi server.', true);
