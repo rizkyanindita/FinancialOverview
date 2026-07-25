@@ -191,6 +191,8 @@ window.switchTab = function(tabId) {
     if(tabId === 'weekly') renderWeekly();
     if(tabId === 'history') renderHistory();
     if(tabId === 'planner') renderPlanner();
+    if(tabId === 'wishlist') renderWishlist();
+    if(tabId === 'monthhistory') renderMonthHistory();
 };
 
 // --- Planner Data Structure & Logic ---
@@ -923,6 +925,389 @@ function renderBeranda() {
     document.getElementById('berandaMasuk').innerText = formatRp(sumMasuk);
     document.getElementById('berandaKeluar').innerText = formatRp(sumKeluar);
     document.getElementById('berandaNabung').innerText = formatRp(sumNabung);
+
+    renderBerandaWishlistTeaser();
+}
+
+// Teaser: 3 wishlist terdekat ke target (exclude yang sudah 100%)
+function renderBerandaWishlistTeaser() {
+    const teaser = document.getElementById('berandaWishlistTeaser');
+    const list = document.getElementById('berandaWishlistList');
+    if(!teaser || !list) return;
+
+    const active = wishlist
+        .map(w => ({ ...w, pct: w.targetAmount > 0 ? (w.currentAmount / w.targetAmount) * 100 : 0 }))
+        .filter(w => w.pct < 100)
+        .sort((a, b) => b.pct - a.pct)
+        .slice(0, 3);
+
+    if(active.length === 0) {
+        teaser.classList.add('hidden');
+        return;
+    }
+    teaser.classList.remove('hidden');
+
+    list.innerHTML = active.map(w => {
+        const pct = Math.min(100, Math.round(w.pct));
+        const emoji = priorityMeta[w.priority]?.emoji || '⭐';
+        return `
+            <div class="flex items-center gap-3">
+                <span class="text-lg flex-shrink-0">${emoji}</span>
+                <div class="flex-1 min-w-0">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs font-bold text-slate-700 truncate">${w.name}</span>
+                        <span class="text-[10px] font-black text-slate-400 flex-shrink-0 ml-2">${pct}%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                        <div class="h-full rounded-full bg-gradient-to-r from-emerald-400 to-primary" style="width:${pct}%"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ==================== WISHLIST ====================
+const priorityMeta = {
+    penting: { emoji: '⭐', label: 'Penting', color: 'rose', order: 0 },
+    rencana: { emoji: '📌', label: 'Rencana', color: 'amber', order: 1 },
+    impian:  { emoji: '💭', label: 'Impian',  color: 'violet', order: 2 },
+};
+const priorityOrder = ['penting', 'rencana', 'impian'];
+
+window.openWishlistModal = function(id) {
+    document.getElementById('formWishlist').reset();
+    document.getElementById('wishlistId').value = '';
+    document.getElementById('wishlistModalTitle').innerText = 'Tambah Wishlist';
+
+    if(id) {
+        const w = wishlist.find(x => x.id === id);
+        if(w) {
+            document.getElementById('wishlistId').value = w.id;
+            document.getElementById('wishlistName').value = w.name;
+            document.getElementById('wishlistTarget').value = formatCurrencyValue(w.targetAmount);
+            document.getElementById('wishlistCurrent').value = formatCurrencyValue(w.currentAmount);
+            document.getElementById('wishlistNotes').value = w.notes || '';
+            const radio = document.querySelector(`input[name="wishlistPriority"][value="${w.priority}"]`);
+            if(radio) radio.checked = true;
+            document.getElementById('wishlistModalTitle').innerText = 'Edit Wishlist';
+        }
+    }
+    document.getElementById('modalWishlist').classList.remove('hidden');
+};
+
+window.closeWishlistModal = function() {
+    document.getElementById('modalWishlist').classList.add('hidden');
+};
+
+document.getElementById('formWishlist')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('wishlistId').value;
+    const name = document.getElementById('wishlistName').value.trim();
+    const targetAmount = parseCurrencyValue(document.getElementById('wishlistTarget').value);
+    const currentAmount = parseCurrencyValue(document.getElementById('wishlistCurrent').value);
+    const notes = document.getElementById('wishlistNotes').value.trim();
+    const priority = document.querySelector('input[name="wishlistPriority"]:checked')?.value || 'penting';
+    const today = new Date().toISOString().slice(0, 10);
+
+    if(targetAmount <= 0) {
+        showToast('Target harus lebih dari Rp 0', true);
+        return;
+    }
+
+    if(id) {
+        const idx = wishlist.findIndex(w => w.id === id);
+        if(idx > -1) {
+            wishlist[idx] = { ...wishlist[idx], name, targetAmount, currentAmount, notes, priority, updatedDate: today };
+        }
+    } else {
+        wishlist.push({
+            id: 'wish_' + Date.now().toString(),
+            name, targetAmount, currentAmount, notes, priority,
+            createdDate: today, updatedDate: today
+        });
+    }
+
+    saveDataToCloud().then(() => {
+        closeWishlistModal();
+        renderWishlist();
+        showToast('Wishlist tersimpan!');
+    });
+});
+
+window.deleteWishlist = function(id) {
+    const w = wishlist.find(x => x.id === id);
+    showConfirm({
+        title: 'Hapus Wishlist',
+        message: `Hapus "${w?.name || 'item ini'}" dari wishlist?`,
+        okLabel: 'Hapus',
+    }, (confirmed) => {
+        if(!confirmed) return;
+        wishlist = wishlist.filter(x => x.id !== id);
+        saveDataToCloud().then(() => {
+            renderWishlist();
+            showToast('Wishlist dihapus!', true);
+        });
+    });
+};
+
+// Tambah dana ke wishlist
+window.openWishlistFundModal = function(id) {
+    const w = wishlist.find(x => x.id === id);
+    if(!w) return;
+    document.getElementById('formWishlistFund').reset();
+    document.getElementById('wishlistFundId').value = id;
+    document.getElementById('wishlistFundSubtitle').innerText = w.name;
+    document.getElementById('modalWishlistFund').classList.remove('hidden');
+    setTimeout(() => document.getElementById('wishlistFundAmount').focus(), 100);
+};
+
+window.closeWishlistFundModal = function() {
+    document.getElementById('modalWishlistFund').classList.add('hidden');
+};
+
+document.getElementById('formWishlistFund')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('wishlistFundId').value;
+    const amount = parseCurrencyValue(document.getElementById('wishlistFundAmount').value);
+    const idx = wishlist.findIndex(w => w.id === id);
+    if(idx > -1 && amount > 0) {
+        wishlist[idx].currentAmount += amount;
+        wishlist[idx].updatedDate = new Date().toISOString().slice(0, 10);
+    }
+    saveDataToCloud().then(() => {
+        closeWishlistFundModal();
+        renderWishlist();
+        showToast('Dana ditambahkan!');
+    });
+});
+
+function renderWishlist() {
+    const container = document.getElementById('wishlistContainer');
+    const emptyEl = document.getElementById('wishlistEmpty');
+    if(!container) return;
+
+    // Summary
+    const totalTarget = wishlist.reduce((s, w) => s + w.targetAmount, 0);
+    const totalCollected = wishlist.reduce((s, w) => s + w.currentAmount, 0);
+    document.getElementById('wishlistTotalTarget').innerText = formatRp(totalTarget);
+    document.getElementById('wishlistTotalCollected').innerText = formatRp(totalCollected);
+
+    if(wishlist.length === 0) {
+        container.innerHTML = '';
+        emptyEl.classList.remove('hidden');
+        document.getElementById('wishlistSummary').classList.add('hidden');
+        return;
+    }
+    emptyEl.classList.add('hidden');
+    document.getElementById('wishlistSummary').classList.remove('hidden');
+
+    const colorMap = {
+        rose:   { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-600', bar: 'from-rose-400 to-rose-500', borderL: 'border-l-rose-300' },
+        amber:  { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-600', bar: 'from-amber-400 to-amber-500', borderL: 'border-l-amber-300' },
+        violet: { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-600', bar: 'from-violet-400 to-violet-500', borderL: 'border-l-violet-300' },
+    };
+
+    container.innerHTML = '';
+    priorityOrder.forEach(prio => {
+        const items = wishlist.filter(w => w.priority === prio);
+        if(items.length === 0) return;
+
+        const meta = priorityMeta[prio];
+        const c = colorMap[meta.color];
+        const reached = items.filter(w => w.currentAmount >= w.targetAmount).length;
+
+        const section = document.createElement('div');
+        section.className = 'space-y-3';
+        section.innerHTML = `
+            <div class="flex items-center gap-2 px-1">
+                <span class="text-lg">${meta.emoji}</span>
+                <h3 class="font-extrabold text-slate-800 text-base">${meta.label}</h3>
+                <span class="text-[10px] font-bold ${c.text} ${c.bg} px-2 py-0.5 rounded-lg border ${c.border}">${reached}/${items.length} tercapai</span>
+            </div>
+        `;
+
+        items.forEach(w => {
+            const pct = w.targetAmount > 0 ? Math.min(100, Math.round((w.currentAmount / w.targetAmount) * 100)) : 0;
+            const sisa = Math.max(0, w.targetAmount - w.currentAmount);
+            const isDone = w.currentAmount >= w.targetAmount;
+
+            const card = document.createElement('div');
+            card.className = `glass-panel rounded-2xl p-4 md:p-5 ${isDone ? 'border-l-4 border-l-emerald-400' : `border-l-4 ${c.borderL}`}`;
+            card.innerHTML = `
+                <div class="flex items-start justify-between gap-2 mb-3">
+                    <div class="min-w-0">
+                        <h4 class="font-extrabold text-slate-800 text-sm md:text-base truncate">${w.name} ${isDone ? '✨' : ''}</h4>
+                        ${w.notes ? `<p class="text-xs text-slate-400 font-medium truncate mt-0.5">${w.notes}</p>` : ''}
+                    </div>
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                        <button onclick="openWishlistModal('${w.id}')" aria-label="Edit ${w.name}" class="w-9 h-9 flex items-center justify-center text-blue-500 active:bg-blue-50 rounded-lg" title="Edit"><i class='bx bx-edit text-lg'></i></button>
+                        <button onclick="deleteWishlist('${w.id}')" aria-label="Hapus ${w.name}" class="w-9 h-9 flex items-center justify-center text-rose-500 active:bg-rose-50 rounded-lg" title="Hapus"><i class='bx bx-trash text-lg'></i></button>
+                    </div>
+                </div>
+                <div class="flex justify-between items-baseline mb-1.5">
+                    <span class="text-xs font-bold text-slate-500">${formatRp(w.currentAmount)} <span class="text-slate-300">/</span> ${formatRp(w.targetAmount)}</span>
+                    <span class="text-sm font-black ${isDone ? 'text-emerald-500' : 'text-slate-700'}">${pct}%</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden mb-3">
+                    <div class="h-full rounded-full ${isDone ? 'bg-emerald-400' : `bg-gradient-to-r ${c.bar}`}" style="width:${pct}%"></div>
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-[11px] font-bold ${isDone ? 'text-emerald-600' : 'text-slate-400'}">${isDone ? '🎉 Target tercapai!' : `Kurang ${formatRp(sisa)}`}</span>
+                    ${!isDone ? `<button onclick="openWishlistFundModal('${w.id}')" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-[11px] font-bold active:scale-95 transition-transform">+ Tambah Dana</button>` : ''}
+                </div>
+            `;
+            section.appendChild(card);
+        });
+
+        container.appendChild(section);
+    });
+}
+
+// ==================== MONTHLY CLOSE & RIWAYAT BULANAN ====================
+function computeMonthTotals(monthKey) {
+    let masuk = incomeEntries
+        .filter(inc => inc.date && inc.date.startsWith(monthKey))
+        .reduce((s, inc) => s + inc.amount, 0);
+    let keluar = 0, nabung = 0;
+    expenses.forEach(ex => {
+        if(!ex.date || !ex.date.startsWith(monthKey)) return;
+        if(ex.type === 'tabungan') nabung += ex.amount;
+        else if(ex.type !== 'pemasukan') keluar += ex.amount;
+    });
+    return { masuk, keluar, nabung, sisa: masuk - keluar - nabung };
+}
+
+// Cek apakah hari ini tanggal >= 26 dan bulan ini belum ditutup
+function checkMonthClose() {
+    const now = new Date();
+    if(now.getDate() < 26) return;
+    const monthKey = getPlannerMonthKey(now);
+    // Sudah ditutup?
+    if(monthlyHistory.some(m => m.monthKey === monthKey)) return;
+    // Ada aktivitas bulan ini? (jangan prompt kalau kosong)
+    const t = computeMonthTotals(monthKey);
+    if(t.masuk === 0 && t.keluar === 0 && t.nabung === 0) return;
+    openMonthCloseModal(monthKey);
+}
+
+let _monthCloseKey = null;
+function openMonthCloseModal(monthKey) {
+    _monthCloseKey = monthKey;
+    const [y, m] = monthKey.split('-');
+    const label = new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    const t = computeMonthTotals(monthKey);
+    document.getElementById('monthCloseMonthLabel').innerText = label;
+    document.getElementById('monthCloseMasuk').innerText = formatRp(t.masuk);
+    document.getElementById('monthCloseKeluar').innerText = formatRp(t.keluar);
+    document.getElementById('monthCloseNabung').innerText = formatRp(t.nabung);
+    document.getElementById('monthCloseSisa').innerText = formatRp(t.sisa);
+    document.getElementById('modalMonthClose').classList.remove('hidden');
+}
+
+window.closeMonthCloseModal = function() {
+    document.getElementById('modalMonthClose').classList.add('hidden');
+};
+
+window.confirmMonthClose = function() {
+    if(!_monthCloseKey) return;
+    const t = computeMonthTotals(_monthCloseKey);
+    const [y, m] = _monthCloseKey.split('-');
+    const label = new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+
+    // Simpan snapshot ke riwayat
+    monthlyHistory.push({
+        id: 'month_' + _monthCloseKey,
+        monthKey: _monthCloseKey,
+        label: label,
+        pemasukan: t.masuk,
+        pengeluaran: t.keluar,
+        tabungan: t.nabung,
+        sisa: t.sisa,
+        closedDate: new Date().toISOString().slice(0, 10)
+    });
+
+    // Reset pemasukan bulan ini ke 0 (hapus income entries bulan tsb)
+    incomeEntries = incomeEntries.filter(inc => !(inc.date && inc.date.startsWith(_monthCloseKey)));
+
+    saveDataToCloud().then(() => {
+        closeMonthCloseModal();
+        renderBeranda();
+        showToast(`Buku ${label} berhasil ditutup!`);
+        _monthCloseKey = null;
+    });
+};
+
+let monthHistoryChartIns;
+function renderMonthHistory() {
+    const listEl = document.getElementById('monthHistoryList');
+    const emptyEl = document.getElementById('monthHistoryEmpty');
+    if(!listEl) return;
+
+    const sorted = [...monthlyHistory].sort((a, b) => a.monthKey.localeCompare(b.monthKey));
+    const totalSaved = monthlyHistory.reduce((s, m) => s + m.sisa, 0);
+    document.getElementById('monthHistoryTotal').innerText = formatRp(totalSaved);
+
+    if(monthlyHistory.length === 0) {
+        listEl.innerHTML = '';
+        emptyEl.classList.remove('hidden');
+        if(monthHistoryChartIns) { monthHistoryChartIns.destroy(); monthHistoryChartIns = null; }
+        return;
+    }
+    emptyEl.classList.add('hidden');
+
+    // Chart (7 bulan terakhir)
+    const recent = sorted.slice(-7);
+    const ctx = document.getElementById('monthHistoryChart').getContext('2d');
+    if(monthHistoryChartIns) monthHistoryChartIns.destroy();
+    monthHistoryChartIns = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: recent.map(m => m.label.split(' ')[0].slice(0, 3)),
+            datasets: [{
+                label: 'Sisa', data: recent.map(m => m.sisa),
+                backgroundColor: '#10b981', borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => formatRp(c.raw) } } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { display: false } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // Detail list (terbaru dulu)
+    listEl.innerHTML = [...sorted].reverse().map(m => `
+        <div class="glass-panel rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-3">
+                <div>
+                    <h4 class="font-extrabold text-slate-800 text-base">${m.label}</h4>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide mt-0.5">Ditutup ${new Date(m.closedDate + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Sisa</p>
+                    <p class="text-lg font-black ${m.sisa < 0 ? 'text-rose-500' : 'text-emerald-600'}">${formatRp(m.sisa)}</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2 text-center">
+                <div class="bg-emerald-50 rounded-xl p-2 border border-emerald-100">
+                    <p class="text-[8px] font-bold text-emerald-600 uppercase tracking-widest">Masuk</p>
+                    <p class="text-[11px] font-bold text-emerald-700 mt-0.5">${formatRp(m.pemasukan)}</p>
+                </div>
+                <div class="bg-rose-50 rounded-xl p-2 border border-rose-100">
+                    <p class="text-[8px] font-bold text-rose-500 uppercase tracking-widest">Keluar</p>
+                    <p class="text-[11px] font-bold text-rose-600 mt-0.5">${formatRp(m.pengeluaran)}</p>
+                </div>
+                <div class="bg-sky-50 rounded-xl p-2 border border-sky-100">
+                    <p class="text-[8px] font-bold text-sky-500 uppercase tracking-widest">Nabung</p>
+                    <p class="text-[11px] font-bold text-sky-600 mt-0.5">${formatRp(m.tabungan)}</p>
+                </div>
+            </div>
+        </div>
+    `).join('');
 }
 
 // --- Dashboard & Charts Logic ---
@@ -1345,6 +1730,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             setQuickDate(0);
             switchTab('beranda');
+
+            // Cek tutup buku bulanan (tanggal >= 26 & belum ditutup)
+            checkMonthClose();
         }
     } catch(err) {
         showToast('Gagal menghubungi server.', true);

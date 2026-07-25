@@ -166,6 +166,12 @@
                 </button>
             </li>
             <li>
+                <button onclick="switchTab('wishlist')" id="nav-wishlist" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative">
+                    <i class='bx bx-star text-xl'></i>
+                    <span class="font-bold text-sm">Wishlist</span>
+                </button>
+            </li>
+            <li>
                 <button onclick="switchTab('input')" id="nav-input" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative">
                     <i class='bx bx-plus-circle text-xl'></i>
                     <span class="font-bold text-sm">Input Manual</span>
@@ -175,6 +181,12 @@
                 <button onclick="switchTab('history')" id="nav-history" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative">
                     <i class='bx bx-wallet-alt text-xl'></i>
                     <span class="font-bold text-sm">Data & Riwayat</span>
+                </button>
+            </li>
+            <li>
+                <button onclick="switchTab('monthhistory')" id="nav-monthhistory" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative">
+                    <i class='bx bx-calendar-check text-xl'></i>
+                    <span class="font-bold text-sm">Riwayat Bulanan</span>
                 </button>
             </li>
         </ul>
@@ -191,9 +203,9 @@
             <i class='bx bxs-home text-2xl mb-1'></i>
             <span class="text-[9px] font-bold tracking-wide">Beranda</span>
         </button>
-        <button onclick="switchTab('weekly')" id="nav-weekly-m" class="nav-btn-m relative flex flex-col items-center justify-center p-2 text-slate-400 w-14 transition-all">
-            <i class='bx bx-line-chart text-2xl mb-1'></i>
-            <span class="text-[9px] font-bold tracking-wide">Weekly</span>
+        <button onclick="switchTab('wishlist')" id="nav-wishlist-m" class="nav-btn-m relative flex flex-col items-center justify-center p-2 text-slate-400 w-14 transition-all">
+            <i class='bx bx-star text-2xl mb-1'></i>
+            <span class="text-[9px] font-bold tracking-wide">Wishlist</span>
         </button>
         <!-- Highlighted Center Action -->
         <button onclick="switchTab('input')" id="nav-input-m" class="nav-btn-m relative flex flex-col items-center justify-center p-0 w-14 -mt-6 transition-all group">
@@ -261,10 +273,24 @@
                         </button>
                     </div>
 
+                    <!-- Wishlist Teaser -->
+                    <div id="berandaWishlistTeaser" class="hidden glass-panel rounded-2xl p-5 mt-5">
+                        <button onclick="switchTab('wishlist')" class="w-full flex items-center justify-between mb-4">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">⭐ Wishlist Terdekat</span>
+                            <span class="text-xs font-bold text-primary flex items-center gap-1">Lihat semua <i class='bx bx-chevron-right'></i></span>
+                        </button>
+                        <div id="berandaWishlistList" class="space-y-3"></div>
+                    </div>
+
                     <!-- CTA Sekunder -->
-                    <button onclick="switchTab('monthly')" class="w-full mt-3 bg-white hover:bg-slate-50 text-slate-600 font-bold py-3.5 rounded-xl border border-slate-200 shadow-sm transition-all text-sm">
-                        📊 Lihat Analisis Bulanan
-                    </button>
+                    <div class="grid grid-cols-2 gap-3 mt-3">
+                        <button onclick="switchTab('monthly')" class="bg-white hover:bg-slate-50 text-slate-600 font-bold py-3.5 rounded-xl border border-slate-200 shadow-sm transition-all text-sm">
+                            📊 Analisis
+                        </button>
+                        <button onclick="switchTab('monthhistory')" class="bg-white hover:bg-slate-50 text-slate-600 font-bold py-3.5 rounded-xl border border-slate-200 shadow-sm transition-all text-sm">
+                            📅 Riwayat Bulanan
+                        </button>
+                    </div>
                 </div>
             </section>
 
@@ -274,6 +300,9 @@
                     <div>
                         <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Monthly <span class="text-gradient">Overview</span></h2>
                         <p class="text-slate-500 text-sm md:text-base mt-2 font-medium">Pantau arus kas bulan ini dengan santai.</p>
+                        <button onclick="switchTab('weekly')" class="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-primary bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
+                            <i class='bx bx-line-chart'></i> Lihat Tracking Mingguan
+                        </button>
                     </div>
                     <div class="glass-panel px-6 py-5 rounded-2xl md:min-w-[280px]">
                         <p class="text-[11px] md:text-xs text-slate-400 uppercase tracking-widest font-bold mb-1.5">Total Pengeluaran Bulan Ini</p>
@@ -716,6 +745,85 @@
                     <p class="text-slate-500 font-medium">Data yang Anda masukkan akan muncul di sini.</p>
                 </div>
             </section>
+
+            <!-- ==================== WISHLIST TAB ==================== -->
+            <section id="tab-wishlist" class="tab-content hide space-y-6">
+                <header class="flex flex-col md:flex-row md:items-end justify-between gap-5">
+                    <div>
+                        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Wish<span class="text-gradient">list</span></h2>
+                        <p class="text-slate-500 text-sm md:text-base mt-2 font-medium">Rencana pembelian besar — sisihkan sedikit demi sedikit.</p>
+                    </div>
+                    <button onclick="openWishlistModal()" class="flex-shrink-0 flex justify-center items-center gap-2 px-5 py-3 bg-gradient-to-r from-sky-400 to-blue-500 hover:opacity-90 text-white rounded-xl transition-all text-sm font-bold shadow-lg shadow-blue-500/30">
+                        <i class='bx bx-plus text-lg'></i> Tambah Wishlist
+                    </button>
+                </header>
+
+                <!-- Ringkasan Wishlist -->
+                <div id="wishlistSummary" class="grid grid-cols-2 gap-3 md:gap-4">
+                    <div class="glass-panel rounded-2xl p-4 md:p-5">
+                        <p class="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest font-bold mb-1.5">Total Target</p>
+                        <p id="wishlistTotalTarget" class="text-base md:text-2xl font-extrabold text-slate-800 tracking-tight">Rp 0</p>
+                    </div>
+                    <div class="glass-panel rounded-2xl p-4 md:p-5">
+                        <p class="text-[10px] md:text-xs text-emerald-600 uppercase tracking-widest font-bold mb-1.5">Total Terkumpul</p>
+                        <p id="wishlistTotalCollected" class="text-base md:text-2xl font-extrabold text-emerald-600 tracking-tight">Rp 0</p>
+                    </div>
+                </div>
+
+                <!-- Daftar Wishlist per tier (populated by JS) -->
+                <div id="wishlistContainer" class="space-y-6"></div>
+
+                <!-- Empty state -->
+                <div id="wishlistEmpty" class="hidden glass-panel rounded-[2rem] p-12 text-center border border-slate-100 flex flex-col items-center">
+                    <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100 mb-5 shadow-inner">
+                        <span class="text-5xl">⭐</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-700 mb-2">Belum Ada Wishlist</h3>
+                    <p class="text-slate-500 font-medium mb-6">Mimpi beli mobil, rumah, atau kulkas baru? Catat di sini.</p>
+                    <button onclick="openWishlistModal()" class="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/30">
+                        <i class='bx bx-plus text-lg'></i> Buat Wishlist Pertama
+                    </button>
+                </div>
+            </section>
+
+            <!-- ==================== RIWAYAT BULANAN TAB ==================== -->
+            <section id="tab-monthhistory" class="tab-content hide space-y-6">
+                <header class="mb-2">
+                    <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Riwayat <span class="text-gradient">Bulanan</span></h2>
+                    <p class="text-slate-500 text-sm md:text-base mt-2 font-medium">Sisa uang yang tersimpan tiap bulan setelah tutup buku.</p>
+                </header>
+
+                <!-- Total Tersimpan -->
+                <div class="glass-panel rounded-2xl p-5 md:p-6 flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest font-bold mb-1.5">Total Sisa Tersimpan</p>
+                        <p id="monthHistoryTotal" class="text-2xl md:text-3xl font-black text-emerald-600 tracking-tight">Rp 0</p>
+                    </div>
+                    <div class="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100">
+                        <i class='bx bx-wallet text-3xl'></i>
+                    </div>
+                </div>
+
+                <!-- Bar Chart -->
+                <div class="glass-panel p-5 md:p-7 rounded-3xl">
+                    <h3 class="text-lg md:text-xl font-bold mb-6 text-slate-800">Tren <span class="text-slate-400 font-medium">Sisa Bulanan</span></h3>
+                    <div class="relative h-56 md:h-72 w-full">
+                        <canvas id="monthHistoryChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Detail List -->
+                <div id="monthHistoryList" class="space-y-4"></div>
+
+                <!-- Empty state -->
+                <div id="monthHistoryEmpty" class="hidden glass-panel rounded-[2rem] p-12 text-center border border-slate-100 flex flex-col items-center">
+                    <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100 mb-5 shadow-inner">
+                        <span class="text-5xl">📅</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-700 mb-2">Belum Ada Riwayat</h3>
+                    <p class="text-slate-500 font-medium">Setiap tanggal 26, tutup buku bulan akan tersimpan di sini.</p>
+                </div>
+            </section>
         </div>
     </main>
 
@@ -814,6 +922,141 @@
                 <button type="submit" class="flex-1 bg-gradient-to-r from-emerald-400 to-emerald-500 hover:opacity-90 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-colors text-sm">Simpan</button>
             </div>
         </form>
+    </div>
+
+    <!-- Modal CRUD Wishlist -->
+    <div id="modalWishlist" class="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm hidden flex items-end md:items-center justify-center p-0 md:p-4">
+        <form id="formWishlist" class="glass-panel w-full max-w-md bg-white rounded-t-[2rem] md:rounded-3xl p-6 md:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 md:hidden"></div>
+
+            <h3 class="text-2xl font-extrabold mb-6 text-slate-800 tracking-tight" id="wishlistModalTitle">Tambah Wishlist</h3>
+            <input type="hidden" id="wishlistId">
+
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Nama Impian</label>
+                    <input type="text" id="wishlistName" required placeholder="Contoh: Beli Mobil, Servis Motor..." class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-semibold text-sm shadow-sm placeholder-slate-300">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Prioritas</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="wishlistPriority" value="penting" class="peer sr-only" checked>
+                            <div class="p-3 bg-white border border-slate-200 rounded-xl text-center peer-checked:bg-rose-50 peer-checked:border-rose-200 transition-all shadow-sm flex flex-col items-center gap-1">
+                                <span class="text-xl">⭐</span>
+                                <span class="text-[11px] font-bold text-slate-500 peer-checked:text-rose-600">Penting</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="wishlistPriority" value="rencana" class="peer sr-only">
+                            <div class="p-3 bg-white border border-slate-200 rounded-xl text-center peer-checked:bg-amber-50 peer-checked:border-amber-200 transition-all shadow-sm flex flex-col items-center gap-1">
+                                <span class="text-xl">📌</span>
+                                <span class="text-[11px] font-bold text-slate-500 peer-checked:text-amber-600">Rencana</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="wishlistPriority" value="impian" class="peer sr-only">
+                            <div class="p-3 bg-white border border-slate-200 rounded-xl text-center peer-checked:bg-violet-50 peer-checked:border-violet-200 transition-all shadow-sm flex flex-col items-center gap-1">
+                                <span class="text-xl">💭</span>
+                                <span class="text-[11px] font-bold text-slate-500 peer-checked:text-violet-600">Impian</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Target (Rp)</label>
+                        <input type="text" inputmode="numeric" id="wishlistTarget" required placeholder="0" class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-extrabold text-base shadow-sm placeholder-slate-300" oninput="formatInputCurrency(this)">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Terkumpul (Rp)</label>
+                        <input type="text" inputmode="numeric" id="wishlistCurrent" placeholder="0" class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-extrabold text-base shadow-sm placeholder-slate-300" oninput="formatInputCurrency(this)">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Catatan (opsional)</label>
+                    <input type="text" id="wishlistNotes" placeholder="Contoh: Toyota Avanza second..." class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-semibold text-sm shadow-sm placeholder-slate-300">
+                </div>
+            </div>
+
+            <div class="mt-8 flex gap-3">
+                <button type="button" onclick="closeWishlistModal()" class="flex-1 bg-white hover:bg-slate-50 text-slate-700 font-bold py-3.5 rounded-xl transition-colors text-sm border border-slate-200 shadow-sm">Batal</button>
+                <button type="submit" class="flex-1 bg-primary hover:bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transition-colors text-sm">Simpan</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Modal Tambah Dana Wishlist -->
+    <div id="modalWishlistFund" class="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm hidden flex items-end md:items-center justify-center p-0 md:p-4">
+        <form id="formWishlistFund" class="glass-panel w-full max-w-sm bg-white rounded-t-[2rem] md:rounded-3xl p-6 md:p-8 shadow-2xl border border-slate-100">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 md:hidden"></div>
+
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-500 mb-4 shadow-sm">
+                    <i class='bx bx-coin-stack text-4xl'></i>
+                </div>
+                <h3 class="text-2xl font-black text-slate-800 tracking-tight">Tambah Dana</h3>
+                <p class="text-sm font-bold text-primary mt-1" id="wishlistFundSubtitle">Nama Item</p>
+            </div>
+
+            <input type="hidden" id="wishlistFundId">
+            <div class="space-y-4">
+                <div class="relative">
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest text-center mb-3">Nominal Ditambah (Rp)</label>
+                    <input type="text" inputmode="numeric" id="wishlistFundAmount" required class="w-full modern-input bg-slate-50 border-slate-200 rounded-2xl px-4 py-5 text-4xl font-black text-slate-800 text-center tracking-tight shadow-inner" oninput="formatInputCurrency(this)">
+                </div>
+            </div>
+
+            <div class="mt-8 flex gap-3">
+                <button type="button" onclick="closeWishlistFundModal()" class="w-1/3 bg-white hover:bg-slate-50 text-slate-600 font-bold py-3.5 rounded-xl border border-slate-200 transition-colors text-sm shadow-sm">Batal</button>
+                <button type="submit" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-colors text-sm tracking-wide">Tambah</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Modal Monthly Close (Tutup Buku Tanggal 26) -->
+    <div id="modalMonthClose" class="fixed inset-0 z-[200] bg-slate-900/50 backdrop-blur-sm hidden flex items-end md:items-center justify-center p-0 md:p-4">
+        <div class="glass-panel w-full max-w-md bg-white rounded-t-[2rem] md:rounded-3xl shadow-2xl border border-slate-100 max-h-[92vh] overflow-y-auto">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-4 md:hidden"></div>
+            <div class="p-6 md:p-8">
+                <div class="text-center mb-6">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 border border-blue-100 text-primary mb-4 shadow-sm">
+                        <i class='bx bx-calendar-check text-4xl'></i>
+                    </div>
+                    <h3 class="text-2xl font-black text-slate-800 tracking-tight">Tutup Buku Bulan</h3>
+                    <p class="text-sm font-bold text-primary mt-1" id="monthCloseMonthLabel">Juli 2026</p>
+                </div>
+
+                <!-- Ringkasan -->
+                <div class="space-y-2.5 mb-5">
+                    <div class="flex justify-between items-center bg-emerald-50 px-4 py-3 rounded-xl border border-emerald-100">
+                        <span class="text-xs font-bold text-emerald-700 uppercase tracking-widest">💵 Pemasukan</span>
+                        <span class="font-black text-emerald-700 text-sm" id="monthCloseMasuk">Rp 0</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-rose-50 px-4 py-3 rounded-xl border border-rose-100">
+                        <span class="text-xs font-bold text-rose-600 uppercase tracking-widest">💸 Pengeluaran</span>
+                        <span class="font-black text-rose-600 text-sm" id="monthCloseKeluar">Rp 0</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-sky-50 px-4 py-3 rounded-xl border border-sky-100">
+                        <span class="text-xs font-bold text-sky-600 uppercase tracking-widest">🏦 Tabungan</span>
+                        <span class="font-black text-sky-600 text-sm" id="monthCloseNabung">Rp 0</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-gradient-to-r from-blue-50 to-emerald-50 px-4 py-4 rounded-xl border border-blue-100 mt-1">
+                        <span class="text-sm font-black text-slate-700 uppercase tracking-widest">🎯 Sisa Bulan</span>
+                        <span class="font-black text-slate-900 text-lg" id="monthCloseSisa">Rp 0</span>
+                    </div>
+                </div>
+
+                <p class="text-xs text-slate-500 font-medium text-center mb-5 leading-relaxed px-2">
+                    Sisa bulan ini akan disimpan di <b>Riwayat Bulanan</b>, lalu pemasukan direset ke Rp 0 untuk mulai bulan baru.
+                </p>
+
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeMonthCloseModal()" class="flex-1 bg-white hover:bg-slate-50 text-slate-600 font-bold py-3.5 rounded-xl border border-slate-200 transition-colors text-sm shadow-sm">Nanti Saja</button>
+                    <button type="button" onclick="confirmMonthClose()" class="flex-1 bg-primary hover:bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/30 transition-colors text-sm">Tutup Buku</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Confirm Dialog -->
