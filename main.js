@@ -2,23 +2,46 @@
 let expenses = [];
 let plannerItems = [];
 
+// Kategori pengeluaran (jenis: "pengeluaran") — mutually exclusive, satu bahasa.
+const EXPENSE_CATEGORIES = ['Cicilan', 'Tagihan', 'Kebutuhan', 'Belanja', 'Lainnya'];
+// Tujuan tabungan (jenis: "tabungan") — aliran terpisah dari kategori pengeluaran.
+const SAVINGS_GOALS = ['Dana Darurat', 'Tabungan Liburan'];
+
+// Mapping label grup planner (key internal grup TIDAK diubah agar data planner lama tetap valid)
+const groupLabels = {
+    'INSTALLMENT': 'Cicilan',
+    'BILLS': 'Tagihan',
+    'KEBUTUHAN': 'Kebutuhan',
+    'GROCERIES': 'Belanja',
+    'LAINNYA': 'Lainnya'
+};
+
+// Terjemahan kategori lama (Bahasa Inggris) -> kategori pengeluaran baru
+const legacyCategoryMap = {
+    'Installment': 'Cicilan',
+    'Bills': 'Tagihan',
+    'Kebutuhan': 'Kebutuhan',
+    'Groceries': 'Belanja',
+    'Lainnya': 'Lainnya'
+};
+
 const defaultPlannerTemplate = [
-    { id: '1', group: 'INSTALLMENT', category: 'Installment', name: 'Quota suami', amount: 50000 },
-    { id: '2', group: 'INSTALLMENT', category: 'Installment', name: 'Quota istri', amount: 40000 },
-    { id: '3', group: 'BILLS', category: 'Bills', name: 'PDAM', amount: 9000 },
-    { id: '4', group: 'BILLS', category: 'Bills', name: 'PLN', amount: 182000 },
-    { id: '5', group: 'BILLS', category: 'Bills', name: 'Wi-fi', amount: 235000 },
+    { id: '1', group: 'INSTALLMENT', category: 'Cicilan', name: 'Quota suami', amount: 50000 },
+    { id: '2', group: 'INSTALLMENT', category: 'Cicilan', name: 'Quota istri', amount: 40000 },
+    { id: '3', group: 'BILLS', category: 'Tagihan', name: 'PDAM', amount: 9000 },
+    { id: '4', group: 'BILLS', category: 'Tagihan', name: 'PLN', amount: 182000 },
+    { id: '5', group: 'BILLS', category: 'Tagihan', name: 'Wi-fi', amount: 235000 },
     { id: '6', group: 'KEBUTUHAN', category: 'Kebutuhan', name: 'Gas lpg', amount: 20000 },
     { id: '7', group: 'KEBUTUHAN', category: 'Kebutuhan', name: 'bensin', amount: 150000 },
     { id: '8', group: 'KEBUTUHAN', category: 'Kebutuhan', name: 'Laundry', amount: 80000 },
     { id: '9', group: 'KEBUTUHAN', category: 'Kebutuhan', name: 'sangu suami', amount: 980000 },
     { id: '10', group: 'KEBUTUHAN', category: 'Kebutuhan', name: 'Pasar', amount: 870000 },
-    { id: '11', group: 'GROCERIES', category: 'Groceries', name: 'Beras', amount: 60000 },
-    { id: '12', group: 'GROCERIES', category: 'Groceries', name: 'Galon', amount: 77500 },
-    { id: '13', group: 'GROCERIES', category: 'Groceries', name: 'skincare', amount: 250000 },
-    { id: '14', group: 'GROCERIES', category: 'Groceries', name: 'Kado dek tata', amount: 800000 },
-    { id: '15', group: 'GROCERIES', category: 'Groceries', name: 'Tol+bensin jkt', amount: 1100000 },
-    { id: '16', group: 'GROCERIES', category: 'Groceries', name: 'Tiket kereta adek', amount: 355000 }
+    { id: '11', group: 'GROCERIES', category: 'Belanja', name: 'Beras', amount: 60000 },
+    { id: '12', group: 'GROCERIES', category: 'Belanja', name: 'Galon', amount: 77500 },
+    { id: '13', group: 'GROCERIES', category: 'Belanja', name: 'skincare', amount: 250000 },
+    { id: '14', group: 'GROCERIES', category: 'Belanja', name: 'Kado dek tata', amount: 800000 },
+    { id: '15', group: 'GROCERIES', category: 'Belanja', name: 'Tol+bensin jkt', amount: 1100000 },
+    { id: '16', group: 'GROCERIES', category: 'Belanja', name: 'Tiket kereta adek', amount: 355000 }
 ];
 
 // Show/Hide Global Loader
@@ -233,14 +256,14 @@ function renderPlanner() {
         // === Desktop: Table Row Header ===
         const headerRow = document.createElement('tr');
         headerRow.innerHTML = `
-            <td colspan="5" class="p-3 bg-slate-50/80 text-slate-400 font-bold uppercase text-center tracking-widest text-xs border-y border-slate-100">${groupName}</td>
+            <td colspan="5" class="p-3 bg-slate-50/80 text-slate-400 font-bold uppercase text-center tracking-widest text-xs border-y border-slate-100">${groupLabels[groupName] || groupName}</td>
         `;
         tbody.appendChild(headerRow);
 
         // === Mobile: Group Header Card ===
         const mGroupHeader = document.createElement('div');
         mGroupHeader.className = 'bg-slate-50/80 text-slate-500 font-bold uppercase text-center tracking-widest text-[10px] py-2 px-4 rounded-xl border border-slate-200 shadow-sm';
-        mGroupHeader.innerText = groupName;
+        mGroupHeader.innerText = groupLabels[groupName] || groupName;
         cardContainer.appendChild(mGroupHeader);
 
         groupedItems[groupName].forEach(item => {
@@ -418,8 +441,7 @@ document.getElementById('formPlannerCrud').addEventListener('submit', (e) => {
     const amount = parseCurrencyValue(document.getElementById('crudPlannerAmount').value);
     
     // Auto-map category based on group
-    const catMap = { 'INSTALLMENT': 'Installment', 'BILLS': 'Bills', 'KEBUTUHAN': 'Kebutuhan', 'GROCERIES': 'Groceries' };
-    const category = catMap[group] || 'Lainnya';
+    const category = groupLabels[group] || 'Lainnya';
     const monthKey = getPlannerMonthKey(plannerViewingDate);
 
     if(id) {
@@ -484,6 +506,7 @@ document.getElementById('formPayPlanner').addEventListener('submit', (e) => {
         plannerRef: plannerRefId,
         date: dateStr,
         amount: amountPaid,
+        type: 'pengeluaran',
         category: category,
         desc: `[Planner] ${name}`
     });
@@ -497,12 +520,53 @@ document.getElementById('formPayPlanner').addEventListener('submit', (e) => {
 
 
 // --- Standard CRUD Operations ---
+window.setTxType = function(type) {
+    document.getElementById('inpTxType').value = type;
+
+    const btnPengeluaran = document.getElementById('btnTxPengeluaran');
+    const btnTabungan = document.getElementById('btnTxTabungan');
+    const gridPengeluaran = document.getElementById('categoryGridPengeluaran');
+    const gridTabungan = document.getElementById('categoryGridTabungan');
+
+    if(type === 'tabungan') {
+        btnTabungan.classList.add('bg-sky-500', 'text-white', 'shadow-lg', 'shadow-sky-500/30');
+        btnTabungan.classList.remove('bg-white', 'text-slate-600', 'border', 'border-slate-200');
+        btnPengeluaran.classList.remove('bg-primary', 'text-white', 'shadow-lg', 'shadow-blue-500/30');
+        btnPengeluaran.classList.add('bg-white', 'text-slate-600', 'border', 'border-slate-200');
+
+        gridTabungan.classList.remove('hide');
+        gridPengeluaran.classList.add('hide');
+
+        // Clear category radios in the hidden (pengeluaran) grid, ensure a default is picked in the visible one
+        gridPengeluaran.querySelectorAll('input[name="category"]').forEach(r => r.checked = false);
+        const firstGoal = gridTabungan.querySelector('input[name="category"]');
+        if(firstGoal && !gridTabungan.querySelector('input[name="category"]:checked')) firstGoal.checked = true;
+    } else {
+        btnPengeluaran.classList.add('bg-primary', 'text-white', 'shadow-lg', 'shadow-blue-500/30');
+        btnPengeluaran.classList.remove('bg-white', 'text-slate-600', 'border', 'border-slate-200');
+        btnTabungan.classList.remove('bg-sky-500', 'text-white', 'shadow-lg', 'shadow-sky-500/30');
+        btnTabungan.classList.add('bg-white', 'text-slate-600', 'border', 'border-slate-200');
+
+        gridPengeluaran.classList.remove('hide');
+        gridTabungan.classList.add('hide');
+
+        gridTabungan.querySelectorAll('input[name="category"]').forEach(r => r.checked = false);
+        const firstCat = gridPengeluaran.querySelector('input[name="category"]');
+        if(firstCat && !gridPengeluaran.querySelector('input[name="category"]:checked')) firstCat.checked = true;
+    }
+};
+
 document.getElementById('expenseForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const id = document.getElementById('editId').value;
     const date = document.getElementById('inpDate').value;
     const amount = parseCurrencyValue(document.getElementById('inpAmount').value);
-    const category = document.querySelector('input[name="category"]:checked').value;
+    const type = document.getElementById('inpTxType').value || 'pengeluaran';
+    const checkedRadio = document.querySelector('input[name="category"]:checked');
+    let category = checkedRadio ? checkedRadio.value : (type === 'tabungan' ? SAVINGS_GOALS[0] : 'Lainnya');
+    if(category === '__custom__') {
+        category = (document.getElementById('inpTujuanCustom').value || 'Tabungan Lainnya').trim();
+    }
     const desc = document.getElementById('inpDesc').value || '-';
 
     if(id) {
@@ -510,18 +574,18 @@ document.getElementById('expenseForm').addEventListener('submit', (e) => {
         if(index > -1) {
             // retain plannerRef if it exists
             const pRef = expenses[index].plannerRef;
-             expenses[index] = { id, plannerRef: pRef, date, amount, category, desc };
+             expenses[index] = { id, plannerRef: pRef, date, amount, type, category, desc };
             showToast('Berhasil diubah!');
         }
     } else {
-        expenses.push({ id: Date.now().toString(), plannerRef: null, date, amount, category, desc });
+        expenses.push({ id: Date.now().toString(), plannerRef: null, date, amount, type, category, desc });
     }
 
     saveDataToCloud().then(() => {
         cancelEdit();
         showToast('Transaksi tersimpan!');
         renderHistory();
-        if(category === 'Dana Darurat' || category === 'Tabungan Liburan') renderMonthly();
+        if(type === 'tabungan') renderMonthly();
     });
 });
 
@@ -548,10 +612,24 @@ window.editExpense = function(id) {
         document.getElementById('inpDate').value = ex.date;
         document.getElementById('inpAmount').value = formatCurrencyValue(ex.amount);
         document.getElementById('inpDesc').value = ex.desc === '-' ? '' : ex.desc;
+
+        const type = ex.type === 'tabungan' ? 'tabungan' : 'pengeluaran';
+        setTxType(type);
+
         const radio = document.querySelector(`input[name="category"][value="${ex.category}"]`);
-        if(radio) radio.checked = true;
+        if(radio) {
+            radio.checked = true;
+        } else if(type === 'tabungan') {
+            // Tujuan custom yang tidak ada di daftar preset
+            const customRadio = document.getElementById('crudTujuanCustomRadio');
+            if(customRadio) {
+                customRadio.checked = true;
+                document.getElementById('inpTujuanCustom').value = ex.category;
+                document.getElementById('inpTujuanCustom').classList.remove('hide');
+            }
+        }
         updateDateDisplay();
-        
+
         document.getElementById('btnCancelEdit').classList.remove('hidden');
         switchTab('input');
         window.scrollTo(0,0);
@@ -562,6 +640,7 @@ window.cancelEdit = function() {
     document.getElementById('expenseForm').reset();
     document.getElementById('editId').value = '';
     setQuickDate(0); // Reset to today
+    setTxType('pengeluaran');
     document.getElementById('btnCancelEdit').classList.add('hidden');
 };
 
@@ -615,10 +694,10 @@ document.getElementById('inpDate').addEventListener('change', updateDateDisplay)
 
 // --- Render Logic: History ---
 const catColors = {
-    'Installment': 'text-orange-600 bg-orange-50 border-orange-200 shadow-sm',
-    'Bills': 'text-red-600 bg-red-50 border-red-200 shadow-sm',
+    'Cicilan': 'text-orange-600 bg-orange-50 border-orange-200 shadow-sm',
+    'Tagihan': 'text-red-600 bg-red-50 border-red-200 shadow-sm',
     'Kebutuhan': 'text-blue-600 bg-blue-50 border-blue-200 shadow-sm',
-    'Groceries': 'text-purple-600 bg-purple-50 border-purple-200 shadow-sm',
+    'Belanja': 'text-purple-600 bg-purple-50 border-purple-200 shadow-sm',
     'Dana Darurat': 'text-emerald-600 bg-emerald-50 border-emerald-200 shadow-sm',
     'Tabungan Liburan': 'text-sky-600 bg-sky-50 border-sky-200 shadow-sm',
     'Lainnya': 'text-slate-700 bg-slate-100 border-slate-300 shadow-sm',
@@ -649,18 +728,23 @@ function renderHistory() {
     sorted.forEach(ex => {
         const colorClass = catColors[ex.category] || catColors['Lainnya'];
         const isPlanner = ex.plannerRef ? '<i class="bx bx-list-check text-blue-400" title="Dari Planner"></i>' : '';
+        const isTabungan = ex.type === 'tabungan';
+        const typeBadge = isTabungan
+            ? `<span class="px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-lg border text-sky-600 bg-sky-50 border-sky-200">💰 Tabungan</span>`
+            : `<span class="px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-lg border text-rose-600 bg-rose-50 border-rose-200">💸 Pengeluaran</span>`;
         const displayDate = new Date(ex.date + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
-        
+
         const card = document.createElement('div');
         card.className = "glass-panel p-5 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4 border border-slate-100 hover:border-slate-200 transition-all hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 group";
-        
+
         card.innerHTML = `
             <div class="flex items-start md:items-center gap-4">
                 <div class="flex flex-shrink-0 w-12 h-12 bg-slate-50 rounded-2xl items-center justify-center border border-slate-100 shadow-sm">
-                    <span class="text-xl">${isPlanner ? '📋' : '💸'}</span>
+                    <span class="text-xl">${isPlanner ? '📋' : (isTabungan ? '🏦' : '💸')}</span>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2 mb-1.5">
+                    <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                        ${typeBadge}
                         <span class="px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-lg border ${colorClass}">${ex.category}</span>
                         <span class="text-xs font-semibold text-slate-400">${displayDate}</span>
                     </div>
@@ -711,9 +795,13 @@ function renderMonthly() {
     expenses.forEach(ex => {
         const d = new Date(ex.date);
         const amt = ex.amount;
+        const isTabungan = ex.type === 'tabungan';
 
-        if(ex.category === 'Dana Darurat') sumDarurat += amt;
-        if(ex.category === 'Tabungan Liburan') sumLiburan += amt;
+        if(isTabungan && ex.category === 'Dana Darurat') sumDarurat += amt;
+        if(isTabungan && ex.category === 'Tabungan Liburan') sumLiburan += amt;
+
+        // Total Pengeluaran HANYA menjumlah jenis "pengeluaran" — tabungan tidak dihitung.
+        if(isTabungan) return;
 
         if(d.getMonth() === currM && d.getFullYear() === currY) {
             totalThisM += amt;
@@ -813,12 +901,13 @@ function renderWeekly() {
     const catSums = {};
 
     expenses.forEach(ex => {
+        if(ex.type === 'tabungan') return; // Weekly tracking hanya untuk pengeluaran
         const d = new Date(ex.date);
         if(d >= weekStart && d <= now) {
             const amt = ex.amount;
             totalWeek += amt;
-            
-            let dIdx = d.getDay() || 7; 
+
+            let dIdx = d.getDay() || 7;
             dailySums[dIdx - 1] += amt;
 
             catSums[ex.category] = (catSums[ex.category] || 0) + amt;
@@ -940,7 +1029,7 @@ window.openPlannerPreview = function() {
 
         const groupHeader = document.createElement('p');
         groupHeader.className = 'text-[10px] font-bold uppercase tracking-widest text-blue-400 mt-3 mb-1 px-1';
-        groupHeader.textContent = groupName;
+        groupHeader.textContent = groupLabels[groupName] || groupName;
         listEl.appendChild(groupHeader);
 
         groupedItems[groupName].forEach(item => {
@@ -1024,6 +1113,50 @@ window.addEventListener('DOMContentLoaded', async () => {
                     needsMigration = true;
                 }
             });
+
+            // MIGRATION: normalize old expenses to the new type/category model.
+            // - Dana Darurat / Tabungan Liburan -> type: tabungan
+            // - Kategori pengeluaran lama (Installment/Bills/Groceries/dst) -> diterjemahkan
+            // - Kategori tak dikenal -> type: pengeluaran, kategori "Lainnya"
+            const remapReport = [];
+            expenses.forEach(ex => {
+                if (ex.type === 'pengeluaran' || ex.type === 'tabungan') return; // sudah dalam format baru
+
+                const oldCategory = ex.category;
+                let newType, newCategory;
+
+                if (oldCategory === 'Dana Darurat' || oldCategory === 'Tabungan Liburan') {
+                    newType = 'tabungan';
+                    newCategory = oldCategory;
+                } else if (legacyCategoryMap[oldCategory]) {
+                    newType = 'pengeluaran';
+                    newCategory = legacyCategoryMap[oldCategory];
+                } else {
+                    newType = 'pengeluaran';
+                    newCategory = 'Lainnya';
+                }
+
+                if (newType !== ex.type || newCategory !== oldCategory) {
+                    remapReport.push({
+                        id: ex.id,
+                        desc: ex.desc,
+                        kategoriLama: oldCategory,
+                        kategoriBaru: newCategory,
+                        jenisBaru: newType
+                    });
+                }
+
+                ex.type = newType;
+                ex.category = newCategory;
+                needsMigration = true;
+            });
+
+            if (remapReport.length > 0) {
+                console.log(`Migrasi kategori: ${remapReport.length} transaksi dipetakan ulang.`);
+                console.table(remapReport);
+                showToast(`${remapReport.length} transaksi lama dipetakan ke kategori baru (lihat console).`, false);
+            }
+
             if (needsMigration) {
                 await saveDataToCloud();
             }
