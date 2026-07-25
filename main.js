@@ -1,6 +1,9 @@
 // --- Utils & State ---
 let expenses = [];
 let plannerItems = [];
+let wishlist = [];
+let monthlyHistory = [];
+let incomeEntries = []; // Track pemasukan per entry: {id, date, amount, desc}
 
 // Kategori pengeluaran (jenis: "pengeluaran") — mutually exclusive, satu bahasa.
 const EXPENSE_CATEGORIES = ['Cicilan', 'Tagihan', 'Kebutuhan', 'Belanja', 'Lainnya'];
@@ -64,7 +67,7 @@ const saveDataToCloud = async () => {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ expenses, plannerItems })
+            body: JSON.stringify({ expenses, plannerItems, incomeEntries, wishlist, monthlyHistory })
         });
         if(!res.ok) throw new Error('Failed to save to cloud');
     } catch (e) {
@@ -856,16 +859,61 @@ function renderHistory() {
     });
 }
 
+// --- Income Tracking ---
+function getCurrentMonthIncome() {
+    const currentMonthKey = getPlannerMonthKey(new Date());
+    return incomeEntries
+        .filter(inc => inc.date && inc.date.startsWith(currentMonthKey))
+        .reduce((sum, inc) => sum + inc.amount, 0);
+}
+
+window.openIncomeModal = function() {
+    document.getElementById('formIncomeAdd').reset();
+    document.getElementById('incomeModalTitle').innerText = 'Catat Pemasukan';
+    document.getElementById('modalIncomeAdd').classList.remove('hidden');
+    setTimeout(() => document.getElementById('incomeAmount').focus(), 100);
+};
+
+window.closeIncomeModal = function() {
+    document.getElementById('modalIncomeAdd').classList.add('hidden');
+};
+
+document.getElementById('formIncomeAdd')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const date = document.getElementById('incomeDate').value;
+    const amount = parseCurrencyValue(document.getElementById('incomeAmount').value);
+    const desc = document.getElementById('incomeDesc').value || 'Pemasukan';
+
+    if(amount <= 0) {
+        showToast('Nominal harus lebih dari Rp 0', true);
+        return;
+    }
+
+    incomeEntries.push({
+        id: Date.now().toString(),
+        date: date,
+        amount: amount,
+        desc: desc
+    });
+
+    saveDataToCloud().then(() => {
+        closeIncomeModal();
+        renderBeranda();
+        showToast('Pemasukan berhasil dicatat!');
+    });
+});
+
 // --- Beranda (Halaman Pembuka) ---
 function renderBeranda() {
     const currentMonthKey = getPlannerMonthKey(new Date());
 
-    let sumMasuk = 0, sumKeluar = 0, sumNabung = 0;
+    // Hitung pemasukan dari incomeEntries
+    let sumMasuk = getCurrentMonthIncome();
+    let sumKeluar = 0, sumNabung = 0;
     expenses.forEach(ex => {
         if (!ex.date || !ex.date.startsWith(currentMonthKey)) return;
-        if (ex.type === 'pemasukan') sumMasuk += ex.amount;
+        if (ex.type === 'pengeluaran') sumKeluar += ex.amount;
         else if (ex.type === 'tabungan') sumNabung += ex.amount;
-        else sumKeluar += ex.amount; // default: pengeluaran
     });
 
     const sisa = sumMasuk - sumKeluar - sumNabung;
@@ -1210,6 +1258,9 @@ window.addEventListener('DOMContentLoaded', async () => {
             
             expenses = data.expenses || [];
             plannerItems = data.plannerItems || [];
+            incomeEntries = data.incomeEntries || [];
+            wishlist = data.wishlist || [];
+            monthlyHistory = data.monthlyHistory || [];
             
             // MIGRATION: Auto-assign existing items without monthKey to current active month
             let needsMigration = false;

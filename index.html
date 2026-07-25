@@ -251,10 +251,15 @@
                         </div>
                     </div>
 
-                    <!-- CTA Utama -->
-                    <button onclick="goCatatPengeluaran()" class="w-full mt-8 bg-primary hover:bg-blue-600 text-white font-bold py-5 rounded-2xl shadow-lg shadow-blue-500/30 transition-all active:scale-[0.98] text-base md:text-lg">
-                        💸 Catat Pengeluaran
-                    </button>
+                    <!-- CTA Utama (2 tombol side-by-side) -->
+                    <div class="grid grid-cols-2 gap-3 mt-8">
+                        <button onclick="openIncomeModal()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold py-4 rounded-2xl shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] text-sm md:text-base border border-emerald-200">
+                            💵 Input Pemasukan
+                        </button>
+                        <button onclick="goCatatPengeluaran()" class="bg-primary hover:bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-500/30 transition-all active:scale-[0.98] text-sm md:text-base">
+                            💸 Catat Pengeluaran
+                        </button>
+                    </div>
 
                     <!-- CTA Sekunder -->
                     <button onclick="switchTab('monthly')" class="w-full mt-3 bg-white hover:bg-slate-50 text-slate-600 font-bold py-3.5 rounded-xl border border-slate-200 shadow-sm transition-all text-sm">
@@ -779,6 +784,34 @@
             <div class="mt-8 flex gap-3">
                 <button type="button" onclick="closePayModal()" class="w-1/3 bg-white hover:bg-slate-50 text-slate-600 font-bold py-3.5 rounded-xl border border-slate-200 transition-colors text-sm shadow-sm">Batal</button>
                 <button type="submit" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-colors text-sm tracking-wide">Konfirmasi</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Modal Input Pemasukan -->
+    <div id="modalIncomeAdd" class="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm hidden flex items-end md:items-center justify-center p-0 md:p-4">
+        <form id="formIncomeAdd" class="glass-panel w-full max-w-md bg-white rounded-t-[2rem] md:rounded-3xl p-6 md:p-8 shadow-2xl border border-slate-100">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 md:hidden"></div>
+
+            <h3 class="text-2xl font-extrabold mb-6 text-slate-800 tracking-tight" id="incomeModalTitle">Catat Pemasukan</h3>
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Tanggal Terima</label>
+                    <input type="date" id="incomeDate" required class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-semibold text-sm shadow-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Nominal (Rp)</label>
+                    <input type="text" inputmode="numeric" id="incomeAmount" required placeholder="0" class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-extrabold text-lg shadow-sm placeholder-slate-300" oninput="formatInputCurrency(this)">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Sumber Pemasukan</label>
+                    <input type="text" id="incomeDesc" placeholder="Contoh: Gaji bulanan, Bonus..." class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-semibold text-sm shadow-sm placeholder-slate-300">
+                </div>
+            </div>
+
+            <div class="mt-8 flex gap-3">
+                <button type="button" onclick="closeIncomeModal()" class="flex-1 bg-white hover:bg-slate-50 text-slate-700 font-bold py-3.5 rounded-xl transition-colors text-sm border border-slate-200 shadow-sm">Batal</button>
+                <button type="submit" class="flex-1 bg-gradient-to-r from-emerald-400 to-emerald-500 hover:opacity-90 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-colors text-sm">Simpan</button>
             </div>
         </form>
     </div>
