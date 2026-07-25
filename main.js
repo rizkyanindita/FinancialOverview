@@ -211,6 +211,45 @@ window.setPlannerMonth = function(val) {
 
 const groupOrder = ['INSTALLMENT', 'BILLS', 'KEBUTUHAN', 'GROCERIES', 'LAINNYA'];
 
+// --- Planner: filter tampilan (Belum Bayar / Semua) ---
+let plannerFilter = 'unpaid';
+
+window.setPlannerFilter = function(filter) {
+    plannerFilter = filter;
+    const btnUnpaid = document.getElementById('filterPlannerUnpaid');
+    const btnAll = document.getElementById('filterPlannerAll');
+    const activeClasses = ['bg-primary', 'text-white', 'shadow-lg', 'shadow-blue-500/30'];
+    const inactiveClasses = ['bg-white', 'text-slate-600', 'border', 'border-slate-200'];
+    if(filter === 'unpaid') {
+        btnUnpaid.classList.remove(...inactiveClasses);
+        btnUnpaid.classList.add(...activeClasses);
+        btnAll.classList.remove(...activeClasses);
+        btnAll.classList.add(...inactiveClasses);
+    } else {
+        btnAll.classList.remove(...inactiveClasses);
+        btnAll.classList.add(...activeClasses);
+        btnUnpaid.classList.remove(...activeClasses);
+        btnUnpaid.classList.add(...inactiveClasses);
+    }
+    renderPlanner();
+};
+
+// --- Planner: menu "..." di mobile ---
+window.togglePlannerMenu = function() {
+    document.getElementById('plannerMenuDropdown').classList.toggle('hidden');
+};
+window.closePlannerMenu = function() {
+    document.getElementById('plannerMenuDropdown').classList.add('hidden');
+};
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('plannerMenuDropdown');
+    const btn = document.getElementById('btnPlannerMenu');
+    if(!menu || menu.classList.contains('hidden')) return;
+    if(!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+        menu.classList.add('hidden');
+    }
+});
+
 function renderPlanner() {
     const monthKey = getPlannerMonthKey(plannerViewingDate);
     const monthName = plannerViewingDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
@@ -254,6 +293,26 @@ function renderPlanner() {
     groupsToRender.forEach(groupName => {
         if(!groupedItems[groupName] || groupedItems[groupName].length === 0) return;
 
+        // Hitung dulu semua item di grup ini (totals selalu dihitung dari SEMUA item,
+        // terlepas dari filter tampilan yang sedang aktif).
+        const computedItems = groupedItems[groupName].map(item => {
+            const amountPaid = expenses
+                .filter(ex => ex.plannerRef === item.id && ex.date.startsWith(monthKey))
+                .reduce((sum, ex) => sum + ex.amount, 0);
+            totalEstimasi += item.amount;
+            totalDibayar += amountPaid;
+            const sisa = item.amount - amountPaid;
+            const isLunas = sisa <= 0;
+            return { item, amountPaid, sisa, isLunas };
+        });
+
+        // Filter tampilan: "unpaid" hanya tampilkan yang belum lunas.
+        const visibleItems = plannerFilter === 'unpaid'
+            ? computedItems.filter(c => !c.isLunas)
+            : computedItems;
+
+        if(visibleItems.length === 0) return; // grup kosong di filter ini, jangan tampilkan header
+
         // === Desktop: Table Row Header ===
         const headerRow = document.createElement('tr');
         headerRow.innerHTML = `
@@ -267,17 +326,7 @@ function renderPlanner() {
         mGroupHeader.innerText = groupLabels[groupName] || groupName;
         cardContainer.appendChild(mGroupHeader);
 
-        groupedItems[groupName].forEach(item => {
-            totalEstimasi += item.amount;
-            
-            const amountPaid = expenses
-                .filter(ex => ex.plannerRef === item.id && ex.date.startsWith(monthKey))
-                .reduce((sum, ex) => sum + ex.amount, 0);
-
-            totalDibayar += amountPaid;
-            const sisa = item.amount - amountPaid;
-            const isLunas = sisa <= 0;
-
+        visibleItems.forEach(({ item, amountPaid, sisa, isLunas }) => {
             // === Desktop: Table Row ===
             const tr = document.createElement('tr');
             if(isLunas) tr.classList.add('bg-emerald-50/50');
@@ -296,40 +345,44 @@ function renderPlanner() {
             `;
             tbody.appendChild(tr);
 
-            // === Mobile: Item Card ===
+            // === Mobile: Item Card (ringkas — 1 baris nama+sisa, progress bar, meta kecil) ===
+            const pct = item.amount > 0 ? Math.min(100, Math.round((amountPaid / item.amount) * 100)) : 0;
             const card = document.createElement('div');
-            card.className = `glass-panel rounded-[1.5rem] p-5 space-y-4 ${isLunas ? 'border-l-4 border-l-emerald-400' : 'border-l-4 border-l-slate-200'}`;
+            card.className = `glass-panel rounded-2xl p-4 ${isLunas ? 'border-l-4 border-l-emerald-400' : 'border-l-4 border-l-slate-200'}`;
             card.innerHTML = `
-                <div class="flex justify-between items-start">
-                    <h4 class="font-extrabold text-slate-800 text-base">${item.name}</h4>
-                    <div class="flex items-center gap-1">
-                        <button onclick="editPlannerItem('${item.id}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-colors border border-transparent hover:border-blue-200"><i class='bx bx-edit text-lg'></i></button>
-                        <button onclick="deletePlannerItem('${item.id}')" class="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors border border-transparent hover:border-rose-200"><i class='bx bx-trash text-lg'></i></button>
-                    </div>
+                <div class="flex items-center justify-between gap-2 mb-2">
+                    <h4 class="font-extrabold text-slate-800 text-sm truncate">${item.name}</h4>
+                    <span class="font-black text-sm flex-shrink-0 ${isLunas ? 'text-emerald-500' : 'text-rose-500'}">${isLunas ? 'LUNAS' : formatRp(Math.max(0, sisa))}</span>
                 </div>
-                <div class="grid grid-cols-3 gap-2 text-center">
-                    <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-100">
-                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Estimasi</p>
-                        <p class="text-xs font-bold text-slate-700 mt-1">${formatRp(item.amount)}</p>
-                    </div>
-                    <div class="bg-emerald-50 rounded-xl p-2.5 border border-emerald-100">
-                        <p class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Dibayar</p>
-                        <p class="text-xs font-bold text-emerald-500 mt-1">${formatRp(amountPaid)}</p>
-                    </div>
-                    <div class="${isLunas ? 'bg-slate-50' : 'bg-rose-50'} rounded-xl p-2.5 border ${isLunas ? 'border-slate-100' : 'border-rose-100'}">
-                        <p class="text-[9px] font-bold ${isLunas ? 'text-slate-400' : 'text-rose-500'} uppercase tracking-widest">Sisa</p>
-                        <p class="text-xs font-black ${isLunas ? 'text-slate-400' : 'text-rose-500'} mt-1">${formatRp(Math.max(0, sisa))}</p>
-                    </div>
+                <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden mb-2">
+                    <div class="h-full rounded-full ${isLunas ? 'bg-emerald-400' : 'bg-blue-400'}" style="width:${pct}%"></div>
                 </div>
-                <div class="pt-2">
-                    ${!isLunas 
-                        ? `<button onclick="openPayModal('${item.id}', '${item.category}', '${item.name}', ${sisa}, '${monthKey}')" class="w-full py-3 bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-500 hover:text-white rounded-xl text-xs font-bold tracking-wide transition-all shadow-sm">💰 Bayar Tagihan</button>` 
-                        : `<div class="w-full py-3 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-xl text-xs font-black tracking-widest text-center shadow-inner">✅ LUNAS</div>`}
+                <div class="flex items-center justify-between gap-2">
+                    <p class="text-[10px] text-slate-400 font-bold">${formatRp(amountPaid)} / ${formatRp(item.amount)}</p>
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                        ${!isLunas ? `<button onclick="openPayModal('${item.id}', '${item.category}', '${item.name}', ${sisa}, '${monthKey}')" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-[10px] font-bold">Bayar</button>` : ''}
+                        <button onclick="editPlannerItem('${item.id}')" class="w-7 h-7 flex items-center justify-center text-blue-500" title="Edit"><i class='bx bx-edit text-base'></i></button>
+                        <button onclick="deletePlannerItem('${item.id}')" class="w-7 h-7 flex items-center justify-center text-rose-500" title="Hapus"><i class='bx bx-trash text-base'></i></button>
+                    </div>
                 </div>
             `;
             cardContainer.appendChild(card);
         });
     });
+
+    // Empty state kalau filter "Belum Bayar" tidak menyisakan apa-apa
+    if(currentMonthItemsCount > 0 && tbody.children.length === 0) {
+        cardContainer.innerHTML = `
+            <div class="glass-panel rounded-[1.5rem] p-8 text-center border border-slate-100">
+                <div class="text-4xl mb-3">🎉</div>
+                <p class="font-bold text-slate-700">Semua tagihan bulan ini sudah lunas!</p>
+                <button onclick="setPlannerFilter('all')" class="mt-4 text-sm font-bold text-blue-600">Lihat Semua Tagihan</button>
+            </div>
+        `;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="5" class="p-8 text-center text-slate-500 font-bold">🎉 Semua tagihan bulan ini sudah lunas!</td>`;
+        tbody.appendChild(tr);
+    }
 
     // Desktop summary
     document.getElementById('plannerTotalEstimasi').innerText = formatRp(totalEstimasi);

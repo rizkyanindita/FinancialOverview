@@ -382,7 +382,7 @@
                         <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Planner <span class="text-gradient">Rutin</span></h2>
                         <p class="text-slate-500 text-sm md:text-base mt-2 font-medium" id="plannerMonthLabel">Atur kewajiban dan tagihan bulanan.</p>
                     </div>
-                    <div class="flex flex-wrap md:flex-nowrap items-center gap-3 w-full md:w-auto">
+                    <div class="flex items-center gap-2 md:gap-3 w-full md:w-auto">
                         <div class="flex flex-1 md:flex-none justify-between items-center gap-1 glass-panel p-1.5 rounded-xl shadow-sm">
                             <button onclick="changePlannerMonth(-1)" title="Bulan sebelumnya" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors flex-shrink-0"><i class='bx bx-chevron-left text-xl'></i></button>
                             <div class="relative flex-1 group">
@@ -395,20 +395,54 @@
                             </div>
                             <button onclick="changePlannerMonth(1)" title="Bulan berikutnya" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors flex-shrink-0"><i class='bx bx-chevron-right text-xl'></i></button>
                         </div>
-                        <button onclick="openPlannerPreview()" class="flex-1 md:flex-none flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition-all text-sm font-bold border border-slate-200 shadow-sm hover:shadow-md">
-                            <i class='bx bx-grid-alt text-lg text-primary'></i> <span class="hidden md:inline">Ringkasan</span>
-                        </button>
-                        <button onclick="copyPlannerFromPreviousMonth()" title="Salin dari Bulan Lalu" class="flex-none flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition-all text-sm font-bold border border-slate-200 shadow-sm hover:shadow-md">
-                            <i class='bx bx-copy text-lg text-blue-500'></i> <span class="hidden md:inline">Salin sebelumnya</span>
-                        </button>
-                        <button onclick="deleteAllPlannerItems()" title="Hapus Semua di Bulan Ini" class="flex-none flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-rose-50 text-rose-500 rounded-xl transition-all text-sm font-bold border border-rose-200 shadow-sm hover:shadow-md">
-                            <i class='bx bx-trash text-lg'></i> <span class="hidden md:inline">Hapus Semua</span>
-                        </button>
-                        <button onclick="openPlannerModal()" class="flex-1 md:flex-none flex justify-center items-center gap-2 px-5 py-3 bg-gradient-to-r from-sky-400 to-blue-500 hover:opacity-90 text-white rounded-xl transition-all text-sm font-bold shadow-lg shadow-blue-500/30">
-                            <i class='bx bx-plus text-lg'></i> Baru
+
+                        <!-- Aksi sekunder: tampil penuh di desktop -->
+                        <div class="hidden md:flex items-center gap-3">
+                            <button onclick="openPlannerPreview()" class="flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition-all text-sm font-bold border border-slate-200 shadow-sm hover:shadow-md">
+                                <i class='bx bx-grid-alt text-lg text-primary'></i> <span>Ringkasan</span>
+                            </button>
+                            <button onclick="copyPlannerFromPreviousMonth()" title="Salin dari Bulan Lalu" class="flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition-all text-sm font-bold border border-slate-200 shadow-sm hover:shadow-md">
+                                <i class='bx bx-copy text-lg text-blue-500'></i> <span>Salin sebelumnya</span>
+                            </button>
+                            <button onclick="deleteAllPlannerItems()" title="Hapus Semua di Bulan Ini" class="flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-rose-50 text-rose-500 rounded-xl transition-all text-sm font-bold border border-rose-200 shadow-sm hover:shadow-md">
+                                <i class='bx bx-trash text-lg'></i> <span>Hapus Semua</span>
+                            </button>
+                        </div>
+
+                        <!-- Aksi sekunder: menu "..." di mobile -->
+                        <div class="relative md:hidden">
+                            <button onclick="togglePlannerMenu()" id="btnPlannerMenu" title="Menu lainnya" aria-label="Menu lainnya" class="w-11 h-11 flex items-center justify-center bg-white text-slate-600 rounded-xl border border-slate-200 shadow-sm">
+                                <i class='bx bx-dots-vertical-rounded text-xl'></i>
+                            </button>
+                            <div id="plannerMenuDropdown" class="hidden absolute right-0 top-full mt-2 w-60 glass-panel rounded-2xl shadow-xl border border-slate-100 py-2 z-30">
+                                <button onclick="openPlannerPreview(); closePlannerMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                                    <i class='bx bx-grid-alt text-lg text-primary'></i> Ringkasan
+                                </button>
+                                <button onclick="copyPlannerFromPreviousMonth(); closePlannerMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                                    <i class='bx bx-copy text-lg text-blue-500'></i> Salin dari Bulan Lalu
+                                </button>
+                                <div class="h-px bg-slate-100 my-1 mx-2"></div>
+                                <button onclick="deleteAllPlannerItems(); closePlannerMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-rose-500 hover:bg-rose-50 transition-colors">
+                                    <i class='bx bx-trash text-lg'></i> Hapus Semua Bulan Ini
+                                </button>
+                            </div>
+                        </div>
+
+                        <button onclick="openPlannerModal()" class="flex-shrink-0 flex justify-center items-center gap-2 px-4 md:px-5 py-3 bg-gradient-to-r from-sky-400 to-blue-500 hover:opacity-90 text-white rounded-xl transition-all text-sm font-bold shadow-lg shadow-blue-500/30">
+                            <i class='bx bx-plus text-lg'></i> <span class="hidden sm:inline">Baru</span>
                         </button>
                     </div>
                 </header>
+
+                <!-- Filter Status -->
+                <div class="flex gap-2">
+                    <button onclick="setPlannerFilter('unpaid')" id="filterPlannerUnpaid" class="px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-primary text-white shadow-lg shadow-blue-500/30">
+                        Belum Bayar
+                    </button>
+                    <button onclick="setPlannerFilter('all')" id="filterPlannerAll" class="px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-white text-slate-600 border border-slate-200">
+                        Semua
+                    </button>
+                </div>
 
                 <!-- Copy Previous Month Action -->
                 <div id="btnCopyPlanner" class="hidden flex justify-center mt-6">
