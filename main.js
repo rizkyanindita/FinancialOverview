@@ -216,21 +216,18 @@ let plannerFilter = 'unpaid';
 
 window.setPlannerFilter = function(filter) {
     plannerFilter = filter;
-    const btnUnpaid = document.getElementById('filterPlannerUnpaid');
-    const btnAll = document.getElementById('filterPlannerAll');
     const activeClasses = ['bg-primary', 'text-white', 'shadow-lg', 'shadow-blue-500/30'];
     const inactiveClasses = ['bg-white', 'text-slate-600', 'border', 'border-slate-200'];
-    if(filter === 'unpaid') {
-        btnUnpaid.classList.remove(...inactiveClasses);
-        btnUnpaid.classList.add(...activeClasses);
-        btnAll.classList.remove(...activeClasses);
-        btnAll.classList.add(...inactiveClasses);
-    } else {
-        btnAll.classList.remove(...inactiveClasses);
-        btnAll.classList.add(...activeClasses);
-        btnUnpaid.classList.remove(...activeClasses);
-        btnUnpaid.classList.add(...inactiveClasses);
-    }
+    // Ada 2 instance tombol filter (cluster sticky mobile + baris statis desktop) — samakan keduanya.
+    document.querySelectorAll('.planner-filter-btn').forEach(btn => {
+        if(btn.dataset.filter === filter) {
+            btn.classList.remove(...inactiveClasses);
+            btn.classList.add(...activeClasses);
+        } else {
+            btn.classList.remove(...activeClasses);
+            btn.classList.add(...inactiveClasses);
+        }
+    });
     renderPlanner();
 };
 
@@ -361,8 +358,8 @@ function renderPlanner() {
                     <p class="text-[10px] text-slate-400 font-bold">${formatRp(amountPaid)} / ${formatRp(item.amount)}</p>
                     <div class="flex items-center gap-1 flex-shrink-0">
                         ${!isLunas ? `<button onclick="openPayModal('${item.id}', '${item.category}', '${item.name}', ${sisa}, '${monthKey}')" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-[10px] font-bold">Bayar</button>` : ''}
-                        <button onclick="editPlannerItem('${item.id}')" class="w-7 h-7 flex items-center justify-center text-blue-500" title="Edit"><i class='bx bx-edit text-base'></i></button>
-                        <button onclick="deletePlannerItem('${item.id}')" class="w-7 h-7 flex items-center justify-center text-rose-500" title="Hapus"><i class='bx bx-trash text-base'></i></button>
+                        <button onclick="editPlannerItem('${item.id}')" aria-label="Edit ${item.name}" class="w-9 h-9 flex items-center justify-center text-blue-500 active:bg-blue-50 rounded-lg" title="Edit"><i class='bx bx-edit text-lg'></i></button>
+                        <button onclick="deletePlannerItem('${item.id}')" aria-label="Hapus ${item.name}" class="w-9 h-9 flex items-center justify-center text-rose-500 active:bg-rose-50 rounded-lg" title="Hapus"><i class='bx bx-trash text-lg'></i></button>
                     </div>
                 </div>
             `;
@@ -388,10 +385,14 @@ function renderPlanner() {
     document.getElementById('plannerTotalEstimasi').innerText = formatRp(totalEstimasi);
     document.getElementById('plannerTotalDibayar').innerText = formatRp(totalDibayar);
     document.getElementById('plannerSisa').innerText = formatRp(totalEstimasi - totalDibayar);
-    // Mobile summary
-    document.getElementById('plannerTotalEstimasiM').innerText = formatRp(totalEstimasi);
-    document.getElementById('plannerTotalDibayarM').innerText = formatRp(totalDibayar);
-    document.getElementById('plannerSisaM').innerText = formatRp(totalEstimasi - totalDibayar);
+    // Mobile sticky summary bar (dobel sebagai tombol Ringkasan)
+    const stickyAmount = document.getElementById('plannerStickyAmount');
+    const stickyBar = document.getElementById('plannerStickyProgressBar');
+    if(stickyAmount) stickyAmount.innerText = `${formatRp(totalDibayar)} / ${formatRp(totalEstimasi)}`;
+    if(stickyBar) {
+        const pctPaid = totalEstimasi > 0 ? Math.min(100, Math.round((totalDibayar / totalEstimasi) * 100)) : 0;
+        stickyBar.style.width = `${pctPaid}%`;
+    }
 }
 
 // --- Modals Planner CRUD ---

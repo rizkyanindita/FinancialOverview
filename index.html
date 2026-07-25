@@ -415,9 +415,6 @@
                                 <i class='bx bx-dots-vertical-rounded text-xl'></i>
                             </button>
                             <div id="plannerMenuDropdown" class="hidden absolute right-0 top-full mt-2 w-60 glass-panel rounded-2xl shadow-xl border border-slate-100 py-2 z-30">
-                                <button onclick="openPlannerPreview(); closePlannerMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors">
-                                    <i class='bx bx-grid-alt text-lg text-primary'></i> Ringkasan
-                                </button>
                                 <button onclick="copyPlannerFromPreviousMonth(); closePlannerMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors">
                                     <i class='bx bx-copy text-lg text-blue-500'></i> Salin dari Bulan Lalu
                                 </button>
@@ -434,14 +431,44 @@
                     </div>
                 </header>
 
-                <!-- Filter Status -->
-                <div class="flex gap-2">
-                    <button onclick="setPlannerFilter('unpaid')" id="filterPlannerUnpaid" class="px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-primary text-white shadow-lg shadow-blue-500/30">
+                <!-- Filter Status (Desktop, statis) -->
+                <div class="hidden md:flex gap-2">
+                    <button onclick="setPlannerFilter('unpaid')" data-filter="unpaid" class="planner-filter-btn px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-primary text-white shadow-lg shadow-blue-500/30">
                         Belum Bayar
                     </button>
-                    <button onclick="setPlannerFilter('all')" id="filterPlannerAll" class="px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-white text-slate-600 border border-slate-200">
+                    <button onclick="setPlannerFilter('all')" data-filter="all" class="planner-filter-btn px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-white text-slate-600 border border-slate-200">
                         Semua
                     </button>
+                </div>
+
+                <!-- Sticky Control Cluster (Mobile): Ringkasan + Filter, selalu terlihat saat scroll -->
+                <div class="md:hidden sticky top-0 z-20 -mx-4 px-4 pt-1 pb-3 bg-slate-50/95 backdrop-blur-sm space-y-3">
+                    <button onclick="openPlannerPreview()" class="w-full glass-panel rounded-2xl p-4 text-left active:scale-[0.98] transition-transform">
+                        <div class="flex items-center justify-between mb-2.5">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-primary border border-blue-100 flex-shrink-0">
+                                    <i class='bx bx-grid-alt text-lg'></i>
+                                </div>
+                                <div>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Ringkasan Bulan Ini</p>
+                                    <p class="text-sm font-black text-slate-800" id="plannerStickyAmount">Rp 0 / Rp 0</p>
+                                </div>
+                            </div>
+                            <i class='bx bx-chevron-right text-2xl text-slate-300 flex-shrink-0'></i>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                            <div id="plannerStickyProgressBar" class="bg-gradient-to-r from-emerald-400 to-primary h-full rounded-full transition-all duration-500" style="width:0%"></div>
+                        </div>
+                    </button>
+
+                    <div class="flex gap-2">
+                        <button onclick="setPlannerFilter('unpaid')" data-filter="unpaid" class="planner-filter-btn flex-1 px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-primary text-white shadow-lg shadow-blue-500/30">
+                            Belum Bayar
+                        </button>
+                        <button onclick="setPlannerFilter('all')" data-filter="all" class="planner-filter-btn flex-1 px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-white text-slate-600 border border-slate-200">
+                            Semua
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Copy Previous Month Action -->
@@ -490,21 +517,6 @@
                     </div>
                 </div>
 
-                <!-- Mobile Summary Footer -->
-                <div id="plannerMobileSummary" class="md:hidden glass-panel rounded-3xl p-4 space-y-3 mt-6">
-                    <div class="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100">
-                        <span class="text-[11px] font-black text-blue-700 uppercase tracking-widest">Total Estimasi</span>
-                        <span class="font-black text-blue-700 text-sm" id="plannerTotalEstimasiM">Rp 0</span>
-                    </div>
-                    <div class="flex justify-between items-center bg-emerald-50 p-3 rounded-xl border border-emerald-100">
-                        <span class="text-[11px] font-black text-emerald-700 uppercase tracking-widest">Sudah Dibayar</span>
-                        <span class="font-black text-emerald-700 text-sm" id="plannerTotalDibayarM">Rp 0</span>
-                    </div>
-                    <div class="flex justify-between items-center bg-rose-50 p-3 rounded-xl border border-rose-100 mt-2">
-                        <span class="text-xs font-black text-rose-700 uppercase tracking-widest">Sisa Kewajiban</span>
-                        <span class="font-black text-rose-700 text-base" id="plannerSisaM">Rp 0</span>
-                    </div>
-                </div>
             </section>
 
             <!-- ==================== INPUT EXPENSE TAB ==================== -->
