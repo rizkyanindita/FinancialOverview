@@ -10,3 +10,6 @@ node_modules/
 
 # OS / editor
 .DS_Store
+
+# Claude local state
+.claude/
