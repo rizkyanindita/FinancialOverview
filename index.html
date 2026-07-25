@@ -189,6 +189,12 @@
                     <span class="font-bold text-sm">Riwayat Bulanan</span>
                 </button>
             </li>
+            <li>
+                <button onclick="switchTab('panduan')" id="nav-panduan" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative">
+                    <i class='bx bx-help-circle text-xl'></i>
+                    <span class="font-bold text-sm">Panduan</span>
+                </button>
+            </li>
         </ul>
         <div class="p-6 border-t border-slate-100">
             <button onclick="exportCSV()" class="w-full flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition-all text-sm font-bold border border-slate-200 shadow-sm hover:shadow-md">
@@ -240,6 +246,16 @@
                         <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-800">Halo, <span class="text-gradient">Rahma</span> 👋</h2>
                         <p class="text-slate-500 text-sm font-medium mt-1">Begini kondisi keuangan bulan ini.</p>
                     </header>
+
+                    <!-- Banner Panduan (untuk pemula) -->
+                    <button onclick="switchTab('panduan')" class="w-full mb-5 flex items-center gap-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 text-left active:scale-[0.99] transition-transform shadow-sm">
+                        <span class="text-3xl flex-shrink-0">🐣</span>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-extrabold text-amber-800 text-sm">Baru pertama pakai? Baca panduan dulu</p>
+                            <p class="text-amber-600 text-xs font-medium mt-0.5">Dijelaskan pelan-pelan, bahasa gampang. Cuma 2 menit! 😊</p>
+                        </div>
+                        <i class='bx bx-chevron-right text-2xl text-amber-400 flex-shrink-0'></i>
+                    </button>
 
                     <!-- Hero: Sisa Uang Bulan Ini -->
                     <div class="glass-panel rounded-[2rem] p-8 md:p-10 text-center shadow-xl shadow-slate-200/50">
@@ -822,6 +838,136 @@
                     </div>
                     <h3 class="text-xl font-bold text-slate-700 mb-2">Belum Ada Riwayat</h3>
                     <p class="text-slate-500 font-medium">Setiap tanggal 26, tutup buku bulan akan tersimpan di sini.</p>
+                </div>
+            </section>
+
+            <!-- ==================== PANDUAN TAB ==================== -->
+            <section id="tab-panduan" class="tab-content hide">
+                <div class="max-w-2xl mx-auto space-y-5">
+                    <!-- Header -->
+                    <header class="text-center mb-2">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-amber-50 rounded-2xl mb-4 text-amber-500 shadow-sm border border-amber-100">
+                            <span class="text-3xl">🐣</span>
+                        </div>
+                        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800 mb-2">Panduan <span class="text-gradient">Gampang</span></h2>
+                        <p class="text-slate-500 text-sm font-medium">Baca pelan-pelan ya. Ini gampang kok! 😊</p>
+                    </header>
+
+                    <!-- Apa ini aplikasi -->
+                    <div class="glass-panel rounded-3xl p-6">
+                        <div class="flex items-center gap-3 mb-3">
+                            <span class="text-3xl">👋</span>
+                            <h3 class="text-lg font-extrabold text-slate-800">Ini Aplikasi Apa?</h3>
+                        </div>
+                        <p class="text-slate-600 text-sm leading-relaxed font-medium">
+                            Ini buku catatan uang. Kita tulis uang yang <b class="text-emerald-600">masuk</b> (misalnya gaji),
+                            dan uang yang <b class="text-rose-500">keluar</b> (misalnya beli sayur).
+                            Nanti aplikasi ini yang hitung, jadi kamu <b>tidak perlu pusing hitung sendiri</b>. 🎉
+                        </p>
+                    </div>
+
+                    <!-- 3 jenis uang -->
+                    <div class="glass-panel rounded-3xl p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="text-3xl">💰</span>
+                            <h3 class="text-lg font-extrabold text-slate-800">Ada 3 Macam Uang</h3>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex gap-3 items-start bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
+                                <span class="text-2xl flex-shrink-0">💵</span>
+                                <div>
+                                    <p class="font-extrabold text-emerald-700 text-sm">Pemasukan = Uang Datang</p>
+                                    <p class="text-emerald-600 text-xs font-medium mt-0.5">Contoh: terima gaji, dapat bonus, dikasih orang.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-3 items-start bg-rose-50 rounded-2xl p-4 border border-rose-100">
+                                <span class="text-2xl flex-shrink-0">💸</span>
+                                <div>
+                                    <p class="font-extrabold text-rose-600 text-sm">Pengeluaran = Uang Pergi</p>
+                                    <p class="text-rose-500 text-xs font-medium mt-0.5">Contoh: beli makan, bayar listrik, beli bensin.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-3 items-start bg-sky-50 rounded-2xl p-4 border border-sky-100">
+                                <span class="text-2xl flex-shrink-0">🏦</span>
+                                <div>
+                                    <p class="font-extrabold text-sky-600 text-sm">Tabungan = Uang Disimpan</p>
+                                    <p class="text-sky-500 text-xs font-medium mt-0.5">Uang yang tidak dipakai, disimpan buat nanti. Ini <b>bukan</b> uang habis, cuma pindah tempat.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Langkah pakai -->
+                    <div class="glass-panel rounded-3xl p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="text-3xl">📝</span>
+                            <h3 class="text-lg font-extrabold text-slate-800">Cara Pakai (Langkah demi Langkah)</h3>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="flex gap-3">
+                                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-500 text-white font-black flex items-center justify-center text-sm">1</div>
+                                <div>
+                                    <p class="font-bold text-slate-800 text-sm">Kalau dapat uang (gaji) 👉 tekan tombol hijau <span class="text-emerald-600">"Input Pemasukan"</span></p>
+                                    <p class="text-slate-500 text-xs font-medium mt-1">Tulis tanggal, jumlah uangnya, terus tekan Simpan. Selesai!</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-3">
+                                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-white font-black flex items-center justify-center text-sm">2</div>
+                                <div>
+                                    <p class="font-bold text-slate-800 text-sm">Kalau belanja / bayar sesuatu 👉 tekan tombol biru <span class="text-primary">"Catat Pengeluaran"</span></p>
+                                    <p class="text-slate-500 text-xs font-medium mt-1">Pilih tanggal, tulis jumlahnya, pilih untuk apa (makan, listrik, dll), Simpan.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-3">
+                                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-700 text-white font-black flex items-center justify-center text-sm">3</div>
+                                <div>
+                                    <p class="font-bold text-slate-800 text-sm">Lihat sisa uang 👉 buka <span class="text-slate-700">"Beranda"</span></p>
+                                    <p class="text-slate-500 text-xs font-medium mt-1">Angka besar di atas itu <b>sisa uangmu bulan ini</b>. Gampang kan?</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fitur lain -->
+                    <div class="glass-panel rounded-3xl p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="text-3xl">✨</span>
+                            <h3 class="text-lg font-extrabold text-slate-800">Menu Lain yang Berguna</h3>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex gap-3 items-start">
+                                <span class="text-2xl flex-shrink-0">📋</span>
+                                <div>
+                                    <p class="font-bold text-slate-800 text-sm">Planner Rutin</p>
+                                    <p class="text-slate-500 text-xs font-medium mt-0.5">Daftar tagihan yang bayar tiap bulan (listrik, wifi, cicilan). Tinggal tekan "Bayar" kalau sudah dibayar.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-3 items-start">
+                                <span class="text-2xl flex-shrink-0">⭐</span>
+                                <div>
+                                    <p class="font-bold text-slate-800 text-sm">Wishlist</p>
+                                    <p class="text-slate-500 text-xs font-medium mt-0.5">Barang impian yang mau dibeli (mobil, kulkas, rumah). Kumpulin uangnya pelan-pelan, aplikasi hitung sudah berapa persen.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-3 items-start">
+                                <span class="text-2xl flex-shrink-0">📅</span>
+                                <div>
+                                    <p class="font-bold text-slate-800 text-sm">Tutup Buku (Tanggal 26)</p>
+                                    <p class="text-slate-500 text-xs font-medium mt-0.5">Setiap tanggal 26, aplikasi tanya "mau tutup bulan?". Tekan ya, nanti sisa uangmu disimpan, terus mulai bulan baru dari nol.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Penutup -->
+                    <div class="glass-panel rounded-3xl p-6 text-center bg-gradient-to-br from-blue-50 to-emerald-50 border border-blue-100">
+                        <p class="text-2xl mb-2">🌟</p>
+                        <p class="font-extrabold text-slate-800 text-base mb-1">Sudah paham? Kamu hebat! 👏</p>
+                        <p class="text-slate-500 text-sm font-medium">Tenang, salah tulis bisa dihapus atau diperbaiki kapan saja. Coba pelan-pelan ya.</p>
+                        <button onclick="switchTab('beranda')" class="mt-5 inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/30 active:scale-95 transition-transform">
+                            <i class='bx bx-home'></i> Mulai Pakai Sekarang
+                        </button>
+                    </div>
                 </div>
             </section>
         </div>
