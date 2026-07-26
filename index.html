@@ -27,6 +27,16 @@
             }
         }
     </script>
+    <!-- Tema: dipasang sebelum render supaya tidak ada kedipan putih -->
+    <script>
+        (function() {
+            var saved = null;
+            try { saved = localStorage.getItem('theme'); } catch(e) {}
+            var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var dark = saved ? saved === 'dark' : prefersDark;
+            if (dark) document.documentElement.classList.add('dark');
+        })();
+    </script>
     <!-- Boxicons -->
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <!-- Chart.js -->
@@ -90,6 +100,78 @@
             color: #3b82f6;
             transform: translateY(-2px);
         }
+        /* ==================== DARK MODE ====================
+           App ini pakai utility class light yang hardcoded (Tailwind CDN),
+           jadi dark mode dikerjakan lewat remap warna di scope html.dark. */
+        html.dark body { background-color: #0f172a; color: #e2e8f0; }
+        html.dark main { background-color: #0f172a !important; }
+        html.dark .glass-panel {
+            background: #1e293b;
+            border-color: #334155;
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+        }
+        html.dark .glass-nav {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: #334155;
+        }
+        html.dark .modern-input {
+            background: #1e293b;
+            border-color: #334155;
+            color: #e2e8f0;
+        }
+        html.dark .modern-input:focus { background: #1e293b; border-color: #3b82f6; }
+        html.dark .bento-card:hover { border-color: #475569; }
+
+        /* Backgrounds */
+        html.dark .bg-white { background-color: #1e293b !important; }
+        html.dark .bg-slate-50 { background-color: #172033 !important; }
+        html.dark .bg-slate-100 { background-color: #263449 !important; }
+        html.dark .bg-slate-200 { background-color: #334155 !important; }
+        html.dark .bg-slate-700,
+        html.dark .bg-slate-900 { background-color: #475569 !important; }
+        html.dark .hover\:bg-slate-50:hover { background-color: #263449 !important; }
+        html.dark .hover\:bg-slate-100:hover { background-color: #334155 !important; }
+
+        /* Text */
+        html.dark .text-slate-900,
+        html.dark .text-slate-800 { color: #f1f5f9 !important; }
+        html.dark .text-slate-700 { color: #e2e8f0 !important; }
+        html.dark .text-slate-600 { color: #cbd5e1 !important; }
+        html.dark .text-slate-500 { color: #94a3b8 !important; }
+        html.dark .text-slate-400 { color: #94a3b8 !important; }
+        html.dark .text-slate-300 { color: #cbd5e1 !important; }
+        html.dark .hover\:text-slate-800:hover { color: #f1f5f9 !important; }
+        html.dark .placeholder-slate-300::placeholder { color: #64748b !important; }
+
+        /* Borders */
+        html.dark .border-slate-100 { border-color: #293548 !important; }
+        html.dark .border-slate-200 { border-color: #334155 !important; }
+        html.dark .border-slate-300 { border-color: #475569 !important; }
+        html.dark .border-white { border-color: #1e293b !important; }
+        html.dark .divide-slate-100 > * + * { border-color: #293548 !important; }
+
+        /* Dekorasi & loader */
+        html.dark #globalLoader { background-color: rgba(15, 23, 42, 0.85) !important; }
+        html.dark .bg-blue-100\/40 { background-color: rgba(59, 130, 246, 0.12) !important; }
+        html.dark .bg-emerald-100\/30 { background-color: rgba(16, 185, 129, 0.1) !important; }
+
+        /* Chip pastel (bg-*-50) supaya kontras di gelap */
+        html.dark [class*="bg-emerald-50"] { background-color: rgba(16, 185, 129, 0.15) !important; }
+        html.dark [class*="bg-rose-50"] { background-color: rgba(244, 63, 94, 0.15) !important; }
+        html.dark [class*="bg-amber-50"] { background-color: rgba(245, 158, 11, 0.15) !important; }
+        html.dark [class*="bg-blue-50"] { background-color: rgba(59, 130, 246, 0.15) !important; }
+        html.dark [class*="bg-sky-50"] { background-color: rgba(14, 165, 233, 0.15) !important; }
+        html.dark [class*="bg-violet-50"] { background-color: rgba(139, 92, 246, 0.15) !important; }
+        html.dark .text-amber-800 { color: #fcd34d !important; }
+
+        html.dark ::-webkit-scrollbar-thumb { background: #475569; }
+        html.dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        /* Ikon toggle: tampilkan sesuai tema aktif */
+        .theme-icon-dark { display: none !important; }
+        html.dark .theme-icon-dark { display: inline-flex !important; align-items: center; }
+        html.dark .theme-icon-light { display: none !important; }
+
         .nav-btn-m.active::after {
             content: '';
             position: absolute;
@@ -122,8 +204,14 @@
             </div>
             <h1 class="text-xl font-bold tracking-tight text-slate-800">Keuangan <span class="text-gradient">Rahma</span></h1>
         </div>
-        <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shadow-sm border border-slate-200">
-            <i class='bx bx-user'></i>
+        <div class="flex items-center gap-2">
+            <button onclick="toggleTheme()" aria-label="Ganti tema" class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shadow-sm border border-slate-200 active:scale-95 transition-transform">
+                <i class='bx bx-moon theme-icon-light'></i>
+                <i class='bx bx-sun theme-icon-dark'></i>
+            </button>
+            <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shadow-sm border border-slate-200">
+                <i class='bx bx-user'></i>
+            </div>
         </div>
     </div>
 
@@ -196,7 +284,11 @@
                 </button>
             </li>
         </ul>
-        <div class="p-6 border-t border-slate-100">
+        <div class="p-6 border-t border-slate-100 space-y-3">
+            <button onclick="toggleTheme()" class="w-full flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition-all text-sm font-bold border border-slate-200 shadow-sm hover:shadow-md">
+                <span class="theme-icon-light flex items-center gap-2"><i class='bx bx-moon text-lg'></i> Mode Gelap</span>
+                <span class="theme-icon-dark flex items-center gap-2"><i class='bx bx-sun text-lg'></i> Mode Terang</span>
+            </button>
             <button onclick="exportCSV()" class="w-full flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition-all text-sm font-bold border border-slate-200 shadow-sm hover:shadow-md">
                 <i class='bx bx-export text-lg'></i> Export Data
             </button>
@@ -263,8 +355,8 @@
                         <h1 id="berandaSisa" class="text-4xl md:text-6xl font-black tracking-tight text-slate-800">Rp 0</h1>
                     </div>
 
-                    <!-- 3 Angka Pendukung -->
-                    <div class="grid grid-cols-3 gap-3 md:gap-4 mt-5">
+                    <!-- 4 Angka Pendukung -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-5">
                         <div class="glass-panel rounded-2xl p-4 md:p-5 text-center">
                             <p class="text-[10px] md:text-xs text-emerald-600 uppercase tracking-widest font-bold mb-1.5">Masuk</p>
                             <p id="berandaMasuk" class="text-sm md:text-lg font-extrabold text-slate-800 tracking-tight">Rp 0</p>
@@ -276,6 +368,10 @@
                         <div class="glass-panel rounded-2xl p-4 md:p-5 text-center">
                             <p class="text-[10px] md:text-xs text-sky-600 uppercase tracking-widest font-bold mb-1.5">Nabung</p>
                             <p id="berandaNabung" class="text-sm md:text-lg font-extrabold text-slate-800 tracking-tight">Rp 0</p>
+                        </div>
+                        <div class="glass-panel rounded-2xl p-4 md:p-5 text-center">
+                            <p class="text-[10px] md:text-xs text-violet-600 uppercase tracking-widest font-bold mb-1.5">Planner</p>
+                            <p id="berandaPlanner" class="text-sm md:text-lg font-extrabold text-slate-800 tracking-tight">Rp 0</p>
                         </div>
                     </div>
 

@@ -154,7 +154,31 @@ window.closeConfirm = function(result) {
 };
 
 // --- Tab Navigation ---
+// --- Tema (dark / light) ---
+let currentTabId = 'beranda';
+
+function applyChartTheme() {
+    if (typeof Chart === 'undefined') return;
+    const isDark = document.documentElement.classList.contains('dark');
+    Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
+    Chart.defaults.borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+}
+
+window.toggleTheme = function() {
+    const root = document.documentElement;
+    const isDark = root.classList.toggle('dark');
+    try { localStorage.setItem('theme', isDark ? 'dark' : 'light'); } catch(e) {}
+
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', isDark ? '#0f172a' : '#f8fafc');
+
+    applyChartTheme();
+    // Render ulang tab aktif supaya chart & elemen dinamis ikut tema baru.
+    switchTab(currentTabId);
+};
+
 window.switchTab = function(tabId) {
+    currentTabId = tabId;
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('bg-slate-50', 'text-slate-800', 'active');
         btn.classList.add('text-slate-500');
@@ -911,20 +935,25 @@ function renderBeranda() {
 
     // Hitung pemasukan dari incomeEntries
     let sumMasuk = getCurrentMonthIncome();
-    let sumKeluar = 0, sumNabung = 0;
+    let sumKeluar = 0, sumNabung = 0, plannerTotalDibayar = 0;
     expenses.forEach(ex => {
         if (!ex.date || !ex.date.startsWith(currentMonthKey)) return;
-        if (ex.type === 'pengeluaran') sumKeluar += ex.amount;
-        else if (ex.type === 'tabungan') sumNabung += ex.amount;
+        if (ex.type === 'tabungan') { sumNabung += ex.amount; return; }
+        if (ex.type !== 'pengeluaran') return;
+        // Pembayaran tagihan Planner dipisah jadi komponen sendiri supaya tidak
+        // terhitung dua kali di rumus sisa uang.
+        if (ex.plannerRef) plannerTotalDibayar += ex.amount;
+        else sumKeluar += ex.amount;
     });
 
-    const sisa = sumMasuk - sumKeluar - sumNabung;
+    const sisa = sumMasuk - sumKeluar - sumNabung - plannerTotalDibayar;
 
     document.getElementById('berandaSisa').innerText = formatRp(sisa);
     document.getElementById('berandaSisa').className = `text-4xl md:text-6xl font-black tracking-tight ${sisa < 0 ? 'text-rose-500' : 'text-slate-800'}`;
     document.getElementById('berandaMasuk').innerText = formatRp(sumMasuk);
     document.getElementById('berandaKeluar').innerText = formatRp(sumKeluar);
     document.getElementById('berandaNabung').innerText = formatRp(sumNabung);
+    document.getElementById('berandaPlanner').innerText = formatRp(plannerTotalDibayar);
 
     renderBerandaWishlistTeaser();
 }
@@ -1273,7 +1302,7 @@ function renderMonthHistory() {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => formatRp(c.raw) } } },
             scales: {
-                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { display: false } },
+                y: { beginAtZero: true, grid: { color: Chart.defaults.borderColor }, ticks: { display: false } },
                 x: { grid: { display: false } }
             }
         }
@@ -1397,7 +1426,7 @@ function renderMonthly() {
             options: {
                 responsive: true, maintainAspectRatio: false, cutout: '70%',
                 plugins: {
-                    legend: { position: 'right', labels: { usePointStyle: true, color: '#e5e7eb' } },
+                    legend: { position: 'right', labels: { usePointStyle: true, color: Chart.defaults.color } },
                     tooltip: { callbacks: { label: (c) => ` ${c.label}: ${formatRp(c.raw)}` } }
                 }
             }
@@ -1422,7 +1451,7 @@ function renderMonthly() {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => formatRp(c.raw) } } },
             scales: {
-                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { display: false } },
+                y: { beginAtZero: true, grid: { color: Chart.defaults.borderColor }, ticks: { display: false } },
                 x: { grid: { display: false } }
             }
         }
@@ -1474,7 +1503,7 @@ function renderWeekly() {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => formatRp(c.raw) } } },
             scales: {
-                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+                y: { beginAtZero: true, grid: { color: Chart.defaults.borderColor } },
                 x: { grid: { display: false } }
             }
         }
@@ -1628,6 +1657,10 @@ document.getElementById('modalConfirm').addEventListener('click', (e) => {
 
 // --- Initial Load Logic ---
 window.addEventListener('DOMContentLoaded', async () => {
+    applyChartTheme();
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeMeta) themeMeta.setAttribute('content', document.documentElement.classList.contains('dark') ? '#0f172a' : '#f8fafc');
+
     toggleLoader(true, 'Menyiapkan data...');
 
     try {
