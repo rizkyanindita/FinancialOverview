@@ -59,8 +59,19 @@ const toggleLoader = (show, text = 'Menyimpan...') => {
 };
 
 // Sync to Cloud
+// Setiap simpan mengirim SELURUH data, jadi satu simpan yang berhasil
+// otomatis ikut mengirim perubahan yang tadi gagal.
+let dataLoaded = false;        // jangan pernah menimpa cloud sebelum data cloud berhasil dimuat
+let hasUnsavedChanges = false;
+
+// Return true kalau tersimpan. Pemanggil hanya boleh menampilkan pesan sukses bila true.
 const saveDataToCloud = async () => {
-    toggleLoader(true, 'Menyimpan ke Cloud...');
+    if (!dataLoaded) {
+        hasUnsavedChanges = true;
+        showToast('Data belum termuat, jadi perubahan tidak disimpan. Muat ulang halaman.', true);
+        return false;
+    }
+    toggleLoader(true, 'Menyimpan...');
     try {
         const res = await fetch('/api/data', {
             method: 'POST',
@@ -70,13 +81,27 @@ const saveDataToCloud = async () => {
             body: JSON.stringify({ expenses, plannerItems, incomeEntries, wishlist, monthlyHistory })
         });
         if(!res.ok) throw new Error('Failed to save to cloud');
+        hasUnsavedChanges = false;
+        return true;
     } catch (e) {
         console.error(e);
-        showToast('Gagal sinkronisasi ke Cloud!', true);
+        hasUnsavedChanges = true;
+        showToast('Gagal menyimpan. Cek internet, nanti dikirim ulang otomatis.', true);
+        return false;
     } finally {
         toggleLoader(false);
     }
 };
+
+// Kirim ulang otomatis saat internet kembali; peringatkan kalau halaman ditutup sebelum tersimpan.
+window.addEventListener('online', () => {
+    if (hasUnsavedChanges && dataLoaded) {
+        saveDataToCloud().then(ok => { if (ok) showToast('Perubahan tadi sudah tersimpan.'); });
+    }
+});
+window.addEventListener('beforeunload', (e) => {
+    if (hasUnsavedChanges && dataLoaded) { e.preventDefault(); e.returnValue = ''; }
+});
 
 const formatRp = (amount) => {
     return new Intl.NumberFormat('id-ID', {
@@ -105,7 +130,8 @@ const formatCurrencyValue = (num) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 };
 
-const showToast = (msg, isError = false) => {
+// action (opsional): { label, onClick } → tombol di dalam toast, mis. "Batalkan".
+const showToast = (msg, isError = false, action = null) => {
     const toast = document.getElementById('toast');
     const toastMsg = document.getElementById('toastMsg');
     const icon = document.getElementById('toastIcon');
@@ -123,11 +149,42 @@ const showToast = (msg, isError = false) => {
         icon.className = 'bx bx-check font-bold text-xl';
     }
     toastMsg.textContent = msg;
-    toast.classList.remove('translate-y-20', 'opacity-0');
-    setTimeout(() => {
-        toast.classList.add('translate-y-20', 'opacity-0');
-    }, 3000);
+    // Error: role=alert (langsung dibacakan) dan TIDAK hilang sendiri — gagal simpan harus tetap
+    // terlihat sampai ditutup atau sampai simpan berikutnya berhasil (ui-ux-pro-max: Persistent Error Messages).
+    toast.setAttribute('role', isError ? 'alert' : 'status');
+    const actionBtn = document.getElementById('toastAction');
+    actionBtn.classList.toggle('hidden', !action);
+    actionBtn.textContent = action ? action.label : '';
+    actionBtn.onclick = action ? (e) => { e.stopPropagation(); hideToast(); action.onClick(); } : null;
+    document.getElementById('toastClose').classList.toggle('hidden', !isError);
+    toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+    // Timer toast sebelumnya dibatalkan supaya toast baru tidak ikut tertutup.
+    clearTimeout(toastTimer);
+    if (!isError) toastTimer = setTimeout(hideToast, action ? 6000 : 3000);
 };
+let toastTimer = null;
+// pointer-events-none: toast yang tersembunyi (transparan) tidak boleh menghalangi tap di bawahnya.
+const hideToast = () => document.getElementById('toast').classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+document.getElementById('toast').addEventListener('click', hideToast);
+
+// Hapus satu item langsung + tombol "Batalkan" (DESIGN_BRIEF: "Dihapus — Batalkan").
+// getArr dipanggil saat itu juga supaya tetap benar walau array global sudah diganti.
+function deleteWithUndo(getArr, id, what, rerender) {
+    const arr = getArr();
+    const idx = arr.findIndex(x => x.id === id);
+    if (idx < 0) return;
+    const [removed] = arr.splice(idx, 1);
+    rerender();
+    saveDataToCloud().then((ok) => {
+        if (!ok) return;
+        showToast(`${what} dihapus.`, false, { label: 'Batalkan', onClick: () => {
+            const cur = getArr();
+            cur.splice(Math.min(idx, cur.length), 0, removed);
+            rerender();
+            saveDataToCloud().then(ok2 => { if (ok2) showToast(`${what} dikembalikan.`); });
+        }});
+    });
+}
 
 // --- Custom Confirm Dialog ---
 let _confirmCallback = null;
@@ -186,7 +243,7 @@ window.switchTab = function(tabId) {
     document.querySelectorAll('.nav-btn-m').forEach(btn => {
         btn.classList.remove('active', 'text-blue-500');
         if(btn.id !== 'nav-input-m') {
-            btn.classList.add('text-slate-400');
+            btn.classList.add('text-slate-500');
         }
     });
     
@@ -201,7 +258,7 @@ window.switchTab = function(tabId) {
     const mActiveBtn = document.getElementById(`nav-${tabId}-m`);
     if(mActiveBtn) {
         if(tabId !== 'input') {
-            mActiveBtn.classList.remove('text-slate-400');
+            mActiveBtn.classList.remove('text-slate-500');
             mActiveBtn.classList.add('text-blue-500');
         }
         mActiveBtn.classList.add('active');
@@ -217,14 +274,55 @@ window.switchTab = function(tabId) {
     if(tabId === 'planner') renderPlanner();
     if(tabId === 'wishlist') renderWishlist();
     if(tabId === 'monthhistory') renderMonthHistory();
+    if(tabId === 'panduan') { try { localStorage.setItem(PANDUAN_KEY, '1'); } catch(e) {} }
 };
 
-// --- Planner Data Structure & Logic ---
-let plannerViewingDate = new Date(); 
+// --- Periode keuangan: mengikuti gajian tanggal 25 ---
+// Periode "November 2026" = 25 Okt – 24 Nov (gaji 25 Okt membiayai tagihan November).
+// Key periode tetap berformat 'YYYY-MM', jadi data planner & riwayat lama tetap valid.
+const PAYDAY = 25;
 
 function getPlannerMonthKey(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
+
+// Key periode untuk sebuah Date atau string 'YYYY-MM-DD'.
+function getPeriodKey(d) {
+    let y, m, day;
+    if (typeof d === 'string') {
+        [y, m, day] = d.split('-').map(Number);
+        m -= 1;
+    } else {
+        y = d.getFullYear(); m = d.getMonth(); day = d.getDate();
+    }
+    return getPlannerMonthKey(new Date(y, day >= PAYDAY ? m + 1 : m, 1));
+}
+
+// Tanggal 1 pada bulan sebuah key (selalu berada di dalam periodenya).
+function periodKeyToDate(key) {
+    const [y, m] = key.split('-').map(Number);
+    return new Date(y, m - 1, 1);
+}
+
+function prevPeriodKey(key) {
+    const d = periodKeyToDate(key);
+    return getPlannerMonthKey(new Date(d.getFullYear(), d.getMonth() - 1, 1));
+}
+
+// "25 Okt – 24 Nov"
+function formatPeriodRange(key) {
+    const d = periodKeyToDate(key);
+    const fmt = (x) => x.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    return `${fmt(new Date(d.getFullYear(), d.getMonth() - 1, PAYDAY))} – ${fmt(new Date(d.getFullYear(), d.getMonth(), PAYDAY - 1))}`;
+}
+
+function formatPeriodName(key) {
+    return periodKeyToDate(key).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+}
+
+// --- Planner Data Structure & Logic ---
+// Selalu tanggal 1 bulan periode yang sedang dilihat.
+let plannerViewingDate = periodKeyToDate(getPeriodKey(new Date()));
 
 window.changePlannerMonth = function(delta) {
     plannerViewingDate.setMonth(plannerViewingDate.getMonth() + delta);
@@ -276,10 +374,25 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// Tombol Bayar di daftar: gaya "tinted", bukan solid — banyak tombol solid
+// berderet saling berebut perhatian (HIG: maks 1–2 tombol menonjol per layar).
+// Solid hijau dipakai sekali saja, di tombol konfirmasi modal Bayar.
+const PAY_BTN_CLASS = 'min-h-[44px] px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-sm font-bold transition-colors';
+
+// Total yang sudah dibayar untuk satu item planner. Item planner unik per periode
+// (salin bulan lalu = id baru), jadi cukup dicocokkan lewat plannerRef — tidak lewat tanggal.
+function getPlannerPaid(item) {
+    return expenses
+        .filter(ex => ex.plannerRef === item.id)
+        .reduce((sum, ex) => sum + ex.amount, 0);
+}
+
 function renderPlanner() {
     const monthKey = getPlannerMonthKey(plannerViewingDate);
-    const monthName = plannerViewingDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    const monthName = formatPeriodName(monthKey);
     document.getElementById('plannerCurrentMonthStr').innerText = monthName;
+    document.getElementById('plannerMonthLabel').innerText =
+        `Periode ${formatPeriodRange(monthKey)}. Tagihan rutin yang sudah kamu rencanakan — tekan Bayar saat dibayar.`;
     const monthPicker = document.getElementById('plannerMonthPicker');
     if (monthPicker) {
         monthPicker.value = monthKey;
@@ -322,9 +435,7 @@ function renderPlanner() {
         // Hitung dulu semua item di grup ini (totals selalu dihitung dari SEMUA item,
         // terlepas dari filter tampilan yang sedang aktif).
         const computedItems = groupedItems[groupName].map(item => {
-            const amountPaid = expenses
-                .filter(ex => ex.plannerRef === item.id && ex.date.startsWith(monthKey))
-                .reduce((sum, ex) => sum + ex.amount, 0);
+            const amountPaid = getPlannerPaid(item);
             totalEstimasi += item.amount;
             totalDibayar += amountPaid;
             const sisa = item.amount - amountPaid;
@@ -342,31 +453,36 @@ function renderPlanner() {
         // === Desktop: Table Row Header ===
         const headerRow = document.createElement('tr');
         headerRow.innerHTML = `
-            <td colspan="5" class="p-3 bg-slate-50/80 text-slate-400 font-bold uppercase text-center tracking-widest text-xs border-y border-slate-100">${groupLabels[groupName] || groupName}</td>
+            <td colspan="5" class="p-3 bg-slate-50/80 text-slate-500 font-bold text-center text-xs border-y border-slate-100">${groupLabels[groupName] || groupName}</td>
         `;
         tbody.appendChild(headerRow);
 
-        // === Mobile: Group Header Card ===
-        const mGroupHeader = document.createElement('div');
-        mGroupHeader.className = 'bg-slate-50/80 text-slate-500 font-bold uppercase text-center tracking-widest text-[10px] py-2 px-4 rounded-xl border border-slate-200 shadow-sm';
+        // === Mobile: Group Header ===
+        const mGroupHeader = document.createElement('h3');
+        mGroupHeader.className = 'text-slate-500 font-bold text-xs pt-2 px-1';
         mGroupHeader.innerText = groupLabels[groupName] || groupName;
         cardContainer.appendChild(mGroupHeader);
 
         visibleItems.forEach(({ item, amountPaid, sisa, isLunas }) => {
+            // Merah HANYA untuk bayar melebihi rencana. Sisa tagihan biasa = netral.
+            const lebih = amountPaid - item.amount;
+            const lebihNote = lebih > 0 ? `<span class="text-rose-600 font-bold">Lebih ${formatRp(lebih)}</span>` : '';
+            // Hapus ada di dalam form Edit, supaya tidak salah pencet di sebelah tombol Bayar.
+            const payBtn = !isLunas
+                ? `<button onclick="payPlannerItem('${item.id}')" class="${PAY_BTN_CLASS}">Bayar</button>`
+                : `<span class="text-xs font-bold text-emerald-700 px-3 py-2">Lunas</span>`;
+            const editBtn = `<button onclick="editPlannerItem('${item.id}')" aria-label="Ubah ${item.name}" title="Ubah" class="w-11 h-11 flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"><i class='bx bx-edit text-lg' aria-hidden="true"></i></button>`;
+
             // === Desktop: Table Row ===
             const tr = document.createElement('tr');
             if(isLunas) tr.classList.add('bg-emerald-50/50');
             tr.innerHTML = `
                 <td class="p-5 font-bold text-slate-800">${item.name}</td>
                 <td class="p-5 font-semibold text-slate-500">${formatRp(item.amount)}</td>
-                <td class="p-5 font-bold text-emerald-500">${formatRp(amountPaid)}</td>
-                <td class="p-5 font-black ${isLunas ? 'text-slate-400' : 'text-rose-500'}">${formatRp(Math.max(0, sisa))}</td>
+                <td class="p-5 font-bold text-slate-700">${formatRp(amountPaid)} ${lebihNote}</td>
+                <td class="p-5 font-black ${isLunas ? 'text-slate-500' : 'text-slate-800'}">${formatRp(Math.max(0, sisa))}</td>
                 <td class="p-5 text-center">
-                    <div class="flex items-center justify-center gap-2">
-                        ${!isLunas ? `<button onclick="openPayModal('${item.id}', '${item.category}', '${item.name}', ${sisa}, '${monthKey}')" class="px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-500 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm">Bayar</button>` : `<span class="text-[10px] font-black tracking-widest text-emerald-600 px-4 py-2 bg-emerald-50 rounded-xl border border-emerald-100">LUNAS</span>`}
-                        <button onclick="editPlannerItem('${item.id}')" class="w-8 h-8 flex items-center justify-center text-blue-500 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-200" title="Edit"><i class='bx bx-edit text-lg'></i></button>
-                        <button onclick="deletePlannerItem('${item.id}')" class="w-8 h-8 flex items-center justify-center text-rose-500 hover:bg-rose-50 rounded-lg transition-colors border border-transparent hover:border-rose-200" title="Hapus"><i class='bx bx-trash text-lg'></i></button>
-                    </div>
+                    <div class="flex items-center justify-center gap-2">${payBtn}${editBtn}</div>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -374,22 +490,18 @@ function renderPlanner() {
             // === Mobile: Item Card (ringkas — 1 baris nama+sisa, progress bar, meta kecil) ===
             const pct = item.amount > 0 ? Math.min(100, Math.round((amountPaid / item.amount) * 100)) : 0;
             const card = document.createElement('div');
-            card.className = `glass-panel rounded-2xl p-4 ${isLunas ? 'border-l-4 border-l-emerald-400' : 'border-l-4 border-l-slate-200'}`;
+            card.className = `glass-panel rounded-2xl p-4 ${isLunas ? 'border-l-4 border-l-emerald-400' : ''}`;
             card.innerHTML = `
                 <div class="flex items-center justify-between gap-2 mb-2">
                     <h4 class="font-extrabold text-slate-800 text-sm truncate">${item.name}</h4>
-                    <span class="font-black text-sm flex-shrink-0 ${isLunas ? 'text-emerald-500' : 'text-rose-500'}">${isLunas ? 'LUNAS' : formatRp(Math.max(0, sisa))}</span>
+                    <span class="font-black text-sm flex-shrink-0 ${isLunas ? 'text-emerald-700' : 'text-slate-800'}">${isLunas ? 'Lunas' : formatRp(Math.max(0, sisa))}</span>
                 </div>
-                <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden mb-2">
-                    <div class="h-full rounded-full ${isLunas ? 'bg-emerald-400' : 'bg-blue-400'}" style="width:${pct}%"></div>
+                <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden mb-2" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Sudah dibayar ${pct}%">
+                    <div class="h-full rounded-full ${isLunas ? 'bg-emerald-500' : 'bg-blue-500'}" style="width:${pct}%"></div>
                 </div>
                 <div class="flex items-center justify-between gap-2">
-                    <p class="text-[10px] text-slate-400 font-bold">${formatRp(amountPaid)} / ${formatRp(item.amount)}</p>
-                    <div class="flex items-center gap-1 flex-shrink-0">
-                        ${!isLunas ? `<button onclick="openPayModal('${item.id}', '${item.category}', '${item.name}', ${sisa}, '${monthKey}')" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-[10px] font-bold">Bayar</button>` : ''}
-                        <button onclick="editPlannerItem('${item.id}')" aria-label="Edit ${item.name}" class="w-9 h-9 flex items-center justify-center text-blue-500 active:bg-blue-50 rounded-lg" title="Edit"><i class='bx bx-edit text-lg'></i></button>
-                        <button onclick="deletePlannerItem('${item.id}')" aria-label="Hapus ${item.name}" class="w-9 h-9 flex items-center justify-center text-rose-500 active:bg-rose-50 rounded-lg" title="Hapus"><i class='bx bx-trash text-lg'></i></button>
-                    </div>
+                    <p class="text-xs text-slate-500 font-semibold">${formatRp(amountPaid)} dari ${formatRp(item.amount)} ${lebihNote}</p>
+                    <div class="flex items-center gap-3 flex-shrink-0">${editBtn}${payBtn}</div>
                 </div>
             `;
             cardContainer.appendChild(card);
@@ -401,12 +513,12 @@ function renderPlanner() {
         cardContainer.innerHTML = `
             <div class="glass-panel rounded-[1.5rem] p-8 text-center border border-slate-100">
                 <div class="text-4xl mb-3">🎉</div>
-                <p class="font-bold text-slate-700">Semua tagihan bulan ini sudah lunas!</p>
-                <button onclick="setPlannerFilter('all')" class="mt-4 text-sm font-bold text-blue-600">Lihat Semua Tagihan</button>
+                <p class="font-bold text-slate-700">Semua tagihan periode ini sudah lunas!</p>
+                <button onclick="setPlannerFilter('all')" class="mt-4 text-sm font-bold text-blue-600">Lihat semua tagihan</button>
             </div>
         `;
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td colspan="5" class="p-8 text-center text-slate-500 font-bold">🎉 Semua tagihan bulan ini sudah lunas!</td>`;
+        tr.innerHTML = `<td colspan="5" class="p-8 text-center text-slate-500 font-bold">🎉 Semua tagihan periode ini sudah lunas!</td>`;
         tbody.appendChild(tr);
     }
 
@@ -428,7 +540,8 @@ function renderPlanner() {
 window.openPlannerModal = function() {
     document.getElementById('formPlannerCrud').reset();
     document.getElementById('crudPlannerId').value = '';
-    document.getElementById('modalPlannerCrudTitle').innerText = 'Tambah Tagihan Rutin';
+    document.getElementById('modalPlannerCrudTitle').innerText = 'Tambah tagihan rutin';
+    document.getElementById('btnDeletePlannerItem').classList.add('hidden');
     document.getElementById('modalPlannerCrud').classList.remove('hidden');
 };
 
@@ -443,24 +556,19 @@ window.editPlannerItem = function(id) {
         document.getElementById('crudPlannerGroup').value = item.group;
         document.getElementById('crudPlannerName').value = item.name;
         document.getElementById('crudPlannerAmount').value = formatCurrencyValue(item.amount);
-        document.getElementById('modalPlannerCrudTitle').innerText = 'Edit Tagihan Rutin';
+        document.getElementById('modalPlannerCrudTitle').innerText = 'Ubah tagihan rutin';
+        document.getElementById('btnDeletePlannerItem').classList.remove('hidden');
         document.getElementById('modalPlannerCrud').classList.remove('hidden');
     }
 };
 
+// Riwayat pembayaran yang sudah tercatat tidak ikut terhapus. Bisa dibatalkan lewat toast.
 window.deletePlannerItem = function(id) {
     const item = plannerItems.find(p => p.id === id);
-    showConfirm({
-        title: 'Hapus Item Planner',
-        message: `Hapus "${item?.name || 'item ini'}" dari Planner? Riwayat pembayaran yang sudah tercatat tidak akan ikut terhapus.`,
-        okLabel: 'Hapus',
-    }, (confirmed) => {
-        if(!confirmed) return;
-        plannerItems = plannerItems.filter(p => p.id !== id);
-        saveDataToCloud().then(() => {
-            renderPlanner();
-            showToast('Item berhasil dihapus!', true);
-        });
+    closePlannerModal();
+    deleteWithUndo(() => plannerItems, id, `Tagihan "${item?.name || ''}"`, () => {
+        renderPlanner();
+        if (currentTabId === 'beranda') renderBeranda();
     });
 };
 
@@ -488,9 +596,10 @@ window.copyPlannerFromPreviousMonth = function() {
 
     plannerItems = [...plannerItems, ...newItems];
 
-    saveDataToCloud().then(() => {
+    saveDataToCloud().then((ok) => {
         renderPlanner();
-        showToast('Template berhasil disalin!');
+        if (currentTabId === 'beranda') renderBeranda();
+        if (ok) showToast(`${newItems.length} tagihan disalin dari ${formatPeriodName(prevMonthKey)}.`);
     });
 };
 
@@ -504,15 +613,15 @@ window.deleteAllPlannerItems = function() {
     }
 
     showConfirm({
-        title: 'Hapus Semua Tagihan',
-        message: 'Apakah Anda yakin ingin menghapus SEMUA tagihan pada bulan ini? Aksi ini tidak dapat dibatalkan.',
-        okLabel: 'Hapus Semua',
+        title: 'Hapus semua tagihan',
+        message: `Hapus ${monthItems.length} tagihan di periode ${formatPeriodName(currentMonthKey)}? Ini tidak bisa dibatalkan.`,
+        okLabel: 'Hapus semua',
     }, (confirmed) => {
         if (!confirmed) return;
         plannerItems = plannerItems.filter(p => p.monthKey !== currentMonthKey);
-        saveDataToCloud().then(() => {
+        saveDataToCloud().then((ok) => {
             renderPlanner();
-            showToast('Semua tagihan bulan ini berhasil dihapus!');
+            if (ok) showToast('Semua tagihan periode ini dihapus.');
         });
     });
 };
@@ -532,7 +641,6 @@ document.getElementById('formPlannerCrud').addEventListener('submit', (e) => {
         const idx = plannerItems.findIndex(p => p.id === id);
         if(idx > -1) {
             plannerItems[idx] = { ...plannerItems[idx], group, name, amount, category, monthKey };
-            showToast('Item diperbarui!');
         }
     } else {
         plannerItems.push({
@@ -540,11 +648,11 @@ document.getElementById('formPlannerCrud').addEventListener('submit', (e) => {
             group, name, amount, category, monthKey
         });
     }
-    
-    saveDataToCloud().then(() => {
+
+    saveDataToCloud().then((ok) => {
         closePlannerModal();
         renderPlanner();
-        showToast('Item Planner tersimpan!');
+        if (ok) showToast('Tagihan tersimpan.');
     });
 });
 
@@ -574,14 +682,10 @@ document.getElementById('formPayPlanner').addEventListener('submit', (e) => {
     const monthKey = document.getElementById('payPlannerMonthKey').value;
     const amountPaid = parseCurrencyValue(document.getElementById('payPlannerAmount').value);
 
+    // Bayar di periode yang sedang berjalan = tanggal hari ini.
+    // Bayar tagihan periode lain = tanggal 1 bulan itu (selalu masuk ke periodenya).
     const now = new Date();
-    const viewingMonth = parseInt(monthKey.split('-')[1]) - 1;
-    const viewingYear = parseInt(monthKey.split('-')[0]);
-    
-    let txDate = new Date(viewingYear, viewingMonth, 1);
-    if(now.getMonth() === viewingMonth && now.getFullYear() === viewingYear) {
-        txDate = now; 
-    }
+    const txDate = getPeriodKey(now) === monthKey ? now : periodKeyToDate(monthKey);
 
     const dateStr = `${txDate.getFullYear()}-${String(txDate.getMonth()+1).padStart(2,'0')}-${String(txDate.getDate()).padStart(2,'0')}`;
 
@@ -595,10 +699,11 @@ document.getElementById('formPayPlanner').addEventListener('submit', (e) => {
         desc: `[Planner] ${name}`
     });
     
-    saveDataToCloud().then(() => {
-        showToast('Pembayaran dicatat!');
+    saveDataToCloud().then((ok) => {
+        if (ok) showToast(`${name} dibayar ${formatRp(amountPaid)}.`);
         closePayModal();
         renderPlanner();
+        if (currentTabId === 'beranda') renderBeranda();
     });
 });
 
@@ -616,8 +721,8 @@ window.setTxType = function(type) {
 
     const activeClasses = {
         pengeluaran: ['bg-primary', 'text-white', 'shadow-lg', 'shadow-blue-500/30'],
-        tabungan: ['bg-sky-500', 'text-white', 'shadow-lg', 'shadow-sky-500/30'],
-        pemasukan: ['bg-emerald-500', 'text-white', 'shadow-lg', 'shadow-emerald-500/30'],
+        tabungan: ['bg-sky-700', 'text-white', 'shadow-lg', 'shadow-sky-500/30'],
+        pemasukan: ['bg-emerald-700', 'text-white', 'shadow-lg', 'shadow-emerald-500/30'],
     };
     const inactiveClasses = ['bg-white', 'text-slate-600', 'border', 'border-slate-200'];
     const buttons = { pengeluaran: btnPengeluaran, tabungan: btnTabungan, pemasukan: btnPemasukan };
@@ -686,15 +791,14 @@ document.getElementById('expenseForm').addEventListener('submit', (e) => {
             // retain plannerRef if it exists
             const pRef = expenses[index].plannerRef;
              expenses[index] = { id, plannerRef: pRef, date, amount, type, category, desc };
-            showToast('Berhasil diubah!');
         }
     } else {
         expenses.push({ id: Date.now().toString(), plannerRef: null, date, amount, type, category, desc });
     }
 
-    saveDataToCloud().then(() => {
+    saveDataToCloud().then((ok) => {
         cancelEdit();
-        showToast('Transaksi tersimpan!');
+        if (ok) showToast('Transaksi tersimpan.');
         renderHistory();
         if(type !== 'pengeluaran') renderMonthly();
     });
@@ -702,18 +806,7 @@ document.getElementById('expenseForm').addEventListener('submit', (e) => {
 
 window.deleteExpense = function(id) {
     const ex = expenses.find(e => e.id === id);
-    showConfirm({
-        title: 'Hapus Transaksi',
-        message: `Hapus transaksi "${ex?.desc || 'ini'}" sebesar ${ex ? formatRp(ex.amount) : ''}? Aksi ini tidak dapat dibatalkan.`,
-        okLabel: 'Hapus',
-    }, (confirmed) => {
-        if(!confirmed) return;
-        expenses = expenses.filter(e => e.id !== id);
-        saveDataToCloud().then(() => {
-            renderHistory();
-            showToast('Berhasil dihapus!', true);
-        });
-    });
+    deleteWithUndo(() => expenses, id, `Transaksi ${ex ? formatRp(ex.amount) : ''}`, renderHistory);
 };
 
 window.editExpense = function(id) {
@@ -804,9 +897,17 @@ window.setQuickDate = function(offset) {
 document.getElementById('inpDate').addEventListener('change', updateDateDisplay);
 
 // --- Render Logic: History ---
+// Merah sengaja tidak dipakai untuk kategori: merah = masalah (minus / lebih bayar / hapus).
+const CATEGORY_CHART_COLORS = {
+    'Cicilan': '#ea580c',
+    'Tagihan': '#0891b2',
+    'Kebutuhan': '#2563eb',
+    'Belanja': '#9333ea',
+    'Lainnya': '#64748b',
+};
 const catColors = {
     'Cicilan': 'text-orange-600 bg-orange-50 border-orange-200 shadow-sm',
-    'Tagihan': 'text-red-600 bg-red-50 border-red-200 shadow-sm',
+    'Tagihan': 'text-cyan-700 bg-cyan-50 border-cyan-200 shadow-sm',
     'Kebutuhan': 'text-blue-600 bg-blue-50 border-blue-200 shadow-sm',
     'Belanja': 'text-purple-600 bg-purple-50 border-purple-200 shadow-sm',
     'Dana Darurat': 'text-emerald-600 bg-emerald-50 border-emerald-200 shadow-sm',
@@ -839,14 +940,14 @@ function renderHistory() {
 
     sorted.forEach(ex => {
         const colorClass = catColors[ex.category] || catColors['Lainnya'];
-        const isPlanner = ex.plannerRef ? '<i class="bx bx-list-check text-blue-400" title="Dari Planner"></i>' : '';
+        const isPlanner = ex.plannerRef ? '<i class="bx bx-list-check text-blue-400" title="Dari Planner" aria-hidden="true"></i>' : '';
         const isTabungan = ex.type === 'tabungan';
         const isPemasukan = ex.type === 'pemasukan';
         const typeBadge = isPemasukan
-            ? `<span class="px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-lg border text-green-600 bg-green-50 border-green-200">💵 Pemasukan</span>`
+            ? `<span class="px-2 py-0.5 text-xs font-bold rounded-lg border text-emerald-700 bg-emerald-50 border-emerald-200">Pemasukan</span>`
             : isTabungan
-                ? `<span class="px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-lg border text-sky-600 bg-sky-50 border-sky-200">💰 Tabungan</span>`
-                : `<span class="px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-lg border text-rose-600 bg-rose-50 border-rose-200">💸 Pengeluaran</span>`;
+                ? `<span class="px-2 py-0.5 text-xs font-bold rounded-lg border text-sky-700 bg-sky-50 border-sky-200">Tabungan</span>`
+                : `<span class="px-2 py-0.5 text-xs font-bold rounded-lg border text-slate-600 bg-slate-50 border-slate-200">Pengeluaran</span>`;
         const displayDate = new Date(ex.date + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
 
         const card = document.createElement('div');
@@ -855,13 +956,13 @@ function renderHistory() {
         card.innerHTML = `
             <div class="flex items-start md:items-center gap-4">
                 <div class="flex flex-shrink-0 w-12 h-12 bg-slate-50 rounded-2xl items-center justify-center border border-slate-100 shadow-sm">
-                    <span class="text-xl">${isPlanner ? '📋' : (isPemasukan ? '💵' : (isTabungan ? '🏦' : '💸'))}</span>
+                    <i class='bx ${isPlanner ? 'bx-list-check' : (isPemasukan ? 'bx-plus-circle' : (isTabungan ? 'bx-coin-stack' : 'bx-minus-circle'))} text-2xl text-slate-600' aria-hidden="true"></i>
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1.5 flex-wrap">
                         ${typeBadge}
-                        <span class="px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-lg border ${colorClass}">${ex.category}</span>
-                        <span class="text-xs font-semibold text-slate-400">${displayDate}</span>
+                        <span class="px-2 py-0.5 text-xs font-bold rounded-lg border ${colorClass}">${ex.category}</span>
+                        <span class="text-xs font-semibold text-slate-500">${displayDate}</span>
                     </div>
                     <p class="font-extrabold text-slate-800 truncate text-base flex items-center gap-1.5">
                         ${ex.desc}
@@ -872,11 +973,11 @@ function renderHistory() {
             <div class="flex items-center justify-between md:flex-col md:items-end gap-3 border-t md:border-t-0 border-slate-100 pt-4 md:pt-0">
                 <span class="font-black text-slate-800 text-lg tracking-tight">${formatRp(ex.amount)}</span>
                 <div class="flex items-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onclick="editExpense('${ex.id}')" class="w-8 h-8 flex items-center justify-center text-blue-500 bg-white hover:bg-blue-50 rounded-xl transition-all border border-slate-200 hover:border-blue-200">
-                        <i class='bx bx-edit-alt text-lg'></i>
+                    <button onclick="editExpense('${ex.id}')" aria-label="Ubah transaksi" title="Ubah" class="w-10 h-10 flex items-center justify-center text-blue-500 bg-white hover:bg-blue-50 rounded-xl transition-all border border-slate-200 hover:border-blue-200">
+                        <i class='bx bx-edit-alt text-lg' aria-hidden="true"></i>
                     </button>
-                    <button onclick="deleteExpense('${ex.id}')" class="w-8 h-8 flex items-center justify-center text-rose-500 bg-white hover:bg-rose-50 rounded-xl transition-all border border-slate-200 hover:border-rose-200">
-                        <i class='bx bx-trash text-lg'></i>
+                    <button onclick="deleteExpense('${ex.id}')" aria-label="Hapus transaksi" title="Hapus" class="w-10 h-10 flex items-center justify-center text-rose-500 bg-white hover:bg-rose-50 rounded-xl transition-all border border-slate-200 hover:border-rose-200">
+                        <i class='bx bx-trash text-lg' aria-hidden="true"></i>
                     </button>
                 </div>
             </div>
@@ -886,16 +987,12 @@ function renderHistory() {
 }
 
 // --- Income Tracking ---
-function getCurrentMonthIncome() {
-    const currentMonthKey = getPlannerMonthKey(new Date());
-    return incomeEntries
-        .filter(inc => inc.date && inc.date.startsWith(currentMonthKey))
-        .reduce((sum, inc) => sum + inc.amount, 0);
-}
-
-window.openIncomeModal = function() {
+window.openIncomeModal = function(defaultDate) {
     document.getElementById('formIncomeAdd').reset();
-    document.getElementById('incomeModalTitle').innerText = 'Catat Pemasukan';
+    const t = new Date();
+    document.getElementById('incomeDate').value = typeof defaultDate === 'string' ? defaultDate
+        : `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+    document.getElementById('incomeModalTitle').innerText = 'Catat pemasukan';
     document.getElementById('modalIncomeAdd').classList.remove('hidden');
     setTimeout(() => document.getElementById('incomeAmount').focus(), 100);
 };
@@ -922,39 +1019,123 @@ document.getElementById('formIncomeAdd')?.addEventListener('submit', (e) => {
         desc: desc
     });
 
-    saveDataToCloud().then(() => {
+    saveDataToCloud().then((ok) => {
         closeIncomeModal();
         renderBeranda();
-        showToast('Pemasukan berhasil dicatat!');
+        if (ok) showToast('Pemasukan tercatat.');
+        if (_reopenMonthCloseKey) { openMonthCloseModal(_reopenMonthCloseKey); _reopenMonthCloseKey = null; }
     });
 });
 
 // --- Beranda (Halaman Pembuka) ---
+// Banner panduan hanya untuk pemula: hilang setelah halaman Panduan pernah dibuka.
+const PANDUAN_KEY = 'panduanDilihat';
+function isPanduanSeen() {
+    try { return localStorage.getItem(PANDUAN_KEY) === '1'; } catch(e) { return false; }
+}
+window.dismissPanduanBanner = function() {
+    try { localStorage.setItem(PANDUAN_KEY, '1'); } catch(e) {}
+    document.getElementById('berandaPanduanBanner').classList.add('hidden');
+};
+
+// Bayar lewat id saja, supaya nama tagihan berisi tanda kutip tidak merusak tombol.
+window.payPlannerItem = function(id) {
+    const item = plannerItems.find(p => p.id === id);
+    if (item) openPayModal(item.id, item.category, item.name, item.amount - getPlannerPaid(item), item.monthKey);
+};
+
+// Salin tagihan periode lalu ke periode yang sedang berjalan (dari Beranda).
+window.copyPlannerToCurrentPeriod = function() {
+    plannerViewingDate = periodKeyToDate(getPeriodKey(new Date()));
+    copyPlannerFromPreviousMonth();
+};
+
+const BERANDA_TAGIHAN_LIMIT = 5;
+
 function renderBeranda() {
-    const currentMonthKey = getPlannerMonthKey(new Date());
+    const periodKey = getPeriodKey(new Date());
+    const t = computeMonthTotals(periodKey);
 
-    // Hitung pemasukan dari incomeEntries
-    let sumMasuk = getCurrentMonthIncome();
-    let sumKeluar = 0, sumNabung = 0, plannerTotalDibayar = 0;
-    expenses.forEach(ex => {
-        if (!ex.date || !ex.date.startsWith(currentMonthKey)) return;
-        if (ex.type === 'tabungan') { sumNabung += ex.amount; return; }
-        if (ex.type !== 'pengeluaran') return;
-        // Pembayaran tagihan Planner dipisah jadi komponen sendiri supaya tidak
-        // terhitung dua kali di rumus sisa uang.
-        if (ex.plannerRef) plannerTotalDibayar += ex.amount;
-        else sumKeluar += ex.amount;
-    });
+    // Periode & hitung mundur gajian
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const periodStart = periodKeyToDate(periodKey);
+    const nextPayday = new Date(periodStart.getFullYear(), periodStart.getMonth(), PAYDAY);
+    const daysLeft = Math.round((nextPayday - today) / 86400000);
+    document.getElementById('berandaPeriod').innerText = `Periode ${formatPeriodName(periodKey)}, ${formatPeriodRange(periodKey)}`;
+    document.getElementById('berandaPayday').innerText = daysLeft <= 1 ? 'Gajian besok' : `Gajian ${daysLeft} hari lagi`;
 
-    const sisa = sumMasuk - sumKeluar - sumNabung - plannerTotalDibayar;
+    // Tagihan planner periode ini yang belum lunas (urut sesuai grup di Planner)
+    const items = plannerItems.filter(p => p.monthKey === periodKey);
+    const unpaid = items
+        .map(item => ({ item, paid: getPlannerPaid(item) }))
+        .map(x => ({ ...x, sisa: x.item.amount - x.paid }))
+        .filter(x => x.sisa > 0)
+        .sort((a, b) => groupOrder.indexOf(a.item.group) - groupOrder.indexOf(b.item.group));
+    const sisaTagihan = unpaid.reduce((s, x) => s + x.sisa, 0);
 
-    document.getElementById('berandaSisa').innerText = formatRp(sisa);
-    document.getElementById('berandaSisa').className = `text-4xl md:text-6xl font-black tracking-tight ${sisa < 0 ? 'text-rose-500' : 'text-slate-800'}`;
-    document.getElementById('berandaMasuk').innerText = formatRp(sumMasuk);
-    document.getElementById('berandaKeluar').innerText = formatRp(sumKeluar);
-    document.getElementById('berandaNabung').innerText = formatRp(sumNabung);
-    document.getElementById('berandaPlanner').innerText = formatRp(plannerTotalDibayar);
+    // Hero: tanpa pemasukan, angka "sisa" pasti minus dan menyesatkan —
+    // tampilkan yang sudah keluar + ajakan mencatat gaji.
+    const heroLabel = document.getElementById('berandaHeroLabel');
+    const heroNum = document.getElementById('berandaSisa');
+    const heroNote = document.getElementById('berandaHeroNote');
+    const heroBase = 'hero-number font-extrabold tracking-tight';
+    if (t.masuk === 0) {
+        heroLabel.innerText = 'Sudah keluar periode ini';
+        heroNum.innerText = formatRp(t.keluar + t.nabung);
+        heroNum.className = `${heroBase} text-slate-800`;
+        // Aksi terpenting saat gaji belum dicatat → tombol sungguhan, bukan tautan di dalam kalimat.
+        heroNote.innerHTML = `Gaji periode ini belum dicatat, jadi sisa uang belum bisa dihitung.
+            <button onclick="openIncomeModal()" class="mt-3 w-full min-h-[44px] bg-primary hover:bg-blue-700 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2"><i class='bx bx-plus-circle text-lg' aria-hidden="true"></i> Catat gaji</button>`;
+    } else {
+        heroLabel.innerText = 'Sisa uang sampai gajian';
+        heroNum.innerText = formatRp(t.sisa);
+        heroNum.className = `${heroBase} ${t.sisa < 0 ? 'text-rose-600' : 'text-slate-800'}`;
+        heroNote.innerText = sisaTagihan > 0
+            ? `Masih ada tagihan ${formatRp(sisaTagihan)}. Setelah semuanya dibayar, sisa sekitar ${formatRp(t.sisa - sisaTagihan)}.`
+            : (items.length > 0 ? 'Semua tagihan periode ini sudah dibayar.' : '');
+    }
 
+    document.getElementById('berandaMasuk').innerText = formatRp(t.masuk);
+    document.getElementById('berandaKeluar').innerText = formatRp(t.keluar);
+    document.getElementById('berandaNabung').innerText = formatRp(t.nabung);
+
+    // Daftar tagihan belum dibayar
+    const listEl = document.getElementById('berandaTagihanList');
+    const countEl = document.getElementById('berandaTagihanCount');
+    const moreEl = document.getElementById('berandaTagihanMore');
+    if (items.length === 0) {
+        const prevKey = prevPeriodKey(periodKey);
+        const prevCount = plannerItems.filter(p => p.monthKey === prevKey).length;
+        countEl.innerText = '';
+        listEl.innerHTML = `
+            <li class="py-4">
+                <p class="text-sm text-slate-600 font-medium">Belum ada tagihan untuk periode ${formatPeriodName(periodKey)}.</p>
+                ${prevCount > 0
+                    ? `<button onclick="copyPlannerToCurrentPeriod()" class="mt-3 w-full bg-primary text-white font-bold py-3 rounded-xl text-sm">Salin ${prevCount} tagihan dari ${formatPeriodName(prevKey)}</button>`
+                    : `<button onclick="switchTab('planner')" class="mt-3 w-full bg-primary text-white font-bold py-3 rounded-xl text-sm">Buat tagihan rutin</button>`}
+            </li>`;
+        moreEl.classList.add('hidden');
+    } else if (unpaid.length === 0) {
+        countEl.innerText = `${items.length} dari ${items.length} lunas`;
+        listEl.innerHTML = `<li class="py-4 text-sm text-slate-600 font-medium">Semua tagihan periode ini sudah lunas. 🎉</li>`;
+        moreEl.classList.add('hidden');
+    } else {
+        countEl.innerText = `${items.length - unpaid.length} dari ${items.length} lunas`;
+        listEl.innerHTML = unpaid.slice(0, BERANDA_TAGIHAN_LIMIT).map(({ item, paid, sisa }) => `
+            <li class="flex items-center gap-3 py-3">
+                <div class="flex-1 min-w-0">
+                    <p class="font-bold text-slate-800 text-sm truncate">${item.name}</p>
+                    <p class="text-xs text-slate-500 font-medium">${paid > 0 ? `Sudah ${formatRp(paid)} dari ${formatRp(item.amount)}` : (groupLabels[item.group] || item.category)}</p>
+                </div>
+                <span class="font-extrabold text-slate-800 text-sm">${formatRp(sisa)}</span>
+                <button onclick="payPlannerItem('${item.id}')" class="${PAY_BTN_CLASS}">Bayar</button>
+            </li>`).join('');
+        const rest = unpaid.length - BERANDA_TAGIHAN_LIMIT;
+        moreEl.classList.toggle('hidden', rest <= 0);
+        moreEl.innerText = `Lihat ${rest} tagihan lainnya`;
+    }
+
+    document.getElementById('berandaPanduanBanner').classList.toggle('hidden', isPanduanSeen());
     renderBerandaWishlistTeaser();
 }
 
@@ -985,7 +1166,7 @@ function renderBerandaWishlistTeaser() {
                 <div class="flex-1 min-w-0">
                     <div class="flex justify-between items-center mb-1">
                         <span class="text-xs font-bold text-slate-700 truncate">${w.name}</span>
-                        <span class="text-[10px] font-black text-slate-400 flex-shrink-0 ml-2">${pct}%</span>
+                        <span class="text-[10px] font-black text-slate-500 flex-shrink-0 ml-2">${pct}%</span>
                     </div>
                     <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                         <div class="h-full rounded-full bg-gradient-to-r from-emerald-400 to-primary" style="width:${pct}%"></div>
@@ -1007,7 +1188,7 @@ const priorityOrder = ['penting', 'rencana', 'impian'];
 window.openWishlistModal = function(id) {
     document.getElementById('formWishlist').reset();
     document.getElementById('wishlistId').value = '';
-    document.getElementById('wishlistModalTitle').innerText = 'Tambah Wishlist';
+    document.getElementById('wishlistModalTitle').innerText = 'Tambah wishlist';
 
     if(id) {
         const w = wishlist.find(x => x.id === id);
@@ -1019,7 +1200,7 @@ window.openWishlistModal = function(id) {
             document.getElementById('wishlistNotes').value = w.notes || '';
             const radio = document.querySelector(`input[name="wishlistPriority"][value="${w.priority}"]`);
             if(radio) radio.checked = true;
-            document.getElementById('wishlistModalTitle').innerText = 'Edit Wishlist';
+            document.getElementById('wishlistModalTitle').innerText = 'Ubah wishlist';
         }
     }
     document.getElementById('modalWishlist').classList.remove('hidden');
@@ -1057,27 +1238,16 @@ document.getElementById('formWishlist')?.addEventListener('submit', (e) => {
         });
     }
 
-    saveDataToCloud().then(() => {
+    saveDataToCloud().then((ok) => {
         closeWishlistModal();
         renderWishlist();
-        showToast('Wishlist tersimpan!');
+        if (ok) showToast('Wishlist tersimpan.');
     });
 });
 
 window.deleteWishlist = function(id) {
     const w = wishlist.find(x => x.id === id);
-    showConfirm({
-        title: 'Hapus Wishlist',
-        message: `Hapus "${w?.name || 'item ini'}" dari wishlist?`,
-        okLabel: 'Hapus',
-    }, (confirmed) => {
-        if(!confirmed) return;
-        wishlist = wishlist.filter(x => x.id !== id);
-        saveDataToCloud().then(() => {
-            renderWishlist();
-            showToast('Wishlist dihapus!', true);
-        });
-    });
+    deleteWithUndo(() => wishlist, id, `Wishlist "${w?.name || ''}"`, renderWishlist);
 };
 
 // Tambah dana ke wishlist
@@ -1104,10 +1274,10 @@ document.getElementById('formWishlistFund')?.addEventListener('submit', (e) => {
         wishlist[idx].currentAmount += amount;
         wishlist[idx].updatedDate = new Date().toISOString().slice(0, 10);
     }
-    saveDataToCloud().then(() => {
+    saveDataToCloud().then((ok) => {
         closeWishlistFundModal();
         renderWishlist();
-        showToast('Dana ditambahkan!');
+        if (ok) showToast('Dana ditambahkan.');
     });
 });
 
@@ -1167,11 +1337,11 @@ function renderWishlist() {
                 <div class="flex items-start justify-between gap-2 mb-3">
                     <div class="min-w-0">
                         <h4 class="font-extrabold text-slate-800 text-sm md:text-base truncate">${w.name} ${isDone ? '✨' : ''}</h4>
-                        ${w.notes ? `<p class="text-xs text-slate-400 font-medium truncate mt-0.5">${w.notes}</p>` : ''}
+                        ${w.notes ? `<p class="text-xs text-slate-500 font-medium truncate mt-0.5">${w.notes}</p>` : ''}
                     </div>
-                    <div class="flex items-center gap-1 flex-shrink-0">
-                        <button onclick="openWishlistModal('${w.id}')" aria-label="Edit ${w.name}" class="w-9 h-9 flex items-center justify-center text-blue-500 active:bg-blue-50 rounded-lg" title="Edit"><i class='bx bx-edit text-lg'></i></button>
-                        <button onclick="deleteWishlist('${w.id}')" aria-label="Hapus ${w.name}" class="w-9 h-9 flex items-center justify-center text-rose-500 active:bg-rose-50 rounded-lg" title="Hapus"><i class='bx bx-trash text-lg'></i></button>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <button onclick="openWishlistModal('${w.id}')" aria-label="Ubah ${w.name}" class="w-11 h-11 flex items-center justify-center text-blue-600 active:bg-blue-50 rounded-lg" title="Ubah"><i class='bx bx-edit text-lg' aria-hidden="true"></i></button>
+                        <button onclick="deleteWishlist('${w.id}')" aria-label="Hapus ${w.name}" class="w-11 h-11 flex items-center justify-center text-rose-600 active:bg-rose-50 rounded-lg" title="Hapus"><i class='bx bx-trash text-lg' aria-hidden="true"></i></button>
                     </div>
                 </div>
                 <div class="flex justify-between items-baseline mb-1.5">
@@ -1182,7 +1352,7 @@ function renderWishlist() {
                     <div class="h-full rounded-full ${isDone ? 'bg-emerald-400' : `bg-gradient-to-r ${c.bar}`}" style="width:${pct}%"></div>
                 </div>
                 <div class="flex items-center justify-between gap-2">
-                    <span class="text-[11px] font-bold ${isDone ? 'text-emerald-600' : 'text-slate-400'}">${isDone ? '🎉 Target tercapai!' : `Kurang ${formatRp(sisa)}`}</span>
+                    <span class="text-[11px] font-bold ${isDone ? 'text-emerald-600' : 'text-slate-500'}">${isDone ? '🎉 Target tercapai!' : `Kurang ${formatRp(sisa)}`}</span>
                     ${!isDone ? `<button onclick="openWishlistFundModal('${w.id}')" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-[11px] font-bold active:scale-95 transition-transform">+ Tambah Dana</button>` : ''}
                 </div>
             `;
@@ -1194,27 +1364,29 @@ function renderWishlist() {
 }
 
 // ==================== MONTHLY CLOSE & RIWAYAT BULANAN ====================
+// Total satu periode gajian (lihat getPeriodKey). Satu-satunya sumber angka
+// Masuk/Keluar/Nabung untuk Beranda, tutup buku, dan riwayat.
 function computeMonthTotals(monthKey) {
+    const inPeriod = (date) => date && getPeriodKey(date) === monthKey;
     let masuk = incomeEntries
-        .filter(inc => inc.date && inc.date.startsWith(monthKey))
+        .filter(inc => inPeriod(inc.date))
         .reduce((s, inc) => s + inc.amount, 0);
     let keluar = 0, nabung = 0;
     expenses.forEach(ex => {
-        if(!ex.date || !ex.date.startsWith(monthKey)) return;
+        if(!inPeriod(ex.date)) return;
         if(ex.type === 'tabungan') nabung += ex.amount;
-        else if(ex.type !== 'pemasukan') keluar += ex.amount;
+        else if(ex.type === 'pemasukan') masuk += ex.amount; // pemasukan dari Input Manual
+        else keluar += ex.amount;
     });
     return { masuk, keluar, nabung, sisa: masuk - keluar - nabung };
 }
 
-// Cek apakah hari ini tanggal >= 26 dan bulan ini belum ditutup
+// Mulai tanggal gajian, tawarkan tutup buku untuk periode yang baru selesai.
 function checkMonthClose() {
-    const now = new Date();
-    if(now.getDate() < 26) return;
-    const monthKey = getPlannerMonthKey(now);
+    const monthKey = prevPeriodKey(getPeriodKey(new Date()));
     // Sudah ditutup?
     if(monthlyHistory.some(m => m.monthKey === monthKey)) return;
-    // Ada aktivitas bulan ini? (jangan prompt kalau kosong)
+    // Ada aktivitas di periode itu? (jangan prompt kalau kosong)
     const t = computeMonthTotals(monthKey);
     if(t.masuk === 0 && t.keluar === 0 && t.nabung === 0) return;
     openMonthCloseModal(monthKey);
@@ -1223,14 +1395,14 @@ function checkMonthClose() {
 let _monthCloseKey = null;
 function openMonthCloseModal(monthKey) {
     _monthCloseKey = monthKey;
-    const [y, m] = monthKey.split('-');
-    const label = new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    const label = `${formatPeriodName(monthKey)} (${formatPeriodRange(monthKey)})`;
     const t = computeMonthTotals(monthKey);
     document.getElementById('monthCloseMonthLabel').innerText = label;
     document.getElementById('monthCloseMasuk').innerText = formatRp(t.masuk);
     document.getElementById('monthCloseKeluar').innerText = formatRp(t.keluar);
     document.getElementById('monthCloseNabung').innerText = formatRp(t.nabung);
     document.getElementById('monthCloseSisa').innerText = formatRp(t.sisa);
+    document.getElementById('monthCloseWarn').classList.toggle('hidden', t.masuk > 0);
     document.getElementById('modalMonthClose').classList.remove('hidden');
 }
 
@@ -1238,13 +1410,25 @@ window.closeMonthCloseModal = function() {
     document.getElementById('modalMonthClose').classList.add('hidden');
 };
 
+// Dari modal tutup buku: catat gaji yang lupa dicatat, bertanggal hari gajian
+// periode itu, lalu tampilkan lagi modal tutup buku dengan angka terbaru.
+let _reopenMonthCloseKey = null;
+window.recordIncomeForClosingPeriod = function() {
+    const key = _monthCloseKey;
+    const start = periodKeyToDate(key);
+    const payday = new Date(start.getFullYear(), start.getMonth() - 1, PAYDAY);
+    _reopenMonthCloseKey = key;
+    closeMonthCloseModal();
+    openIncomeModal(`${payday.getFullYear()}-${String(payday.getMonth()+1).padStart(2,'0')}-${String(payday.getDate()).padStart(2,'0')}`);
+};
+
 window.confirmMonthClose = function() {
     if(!_monthCloseKey) return;
     const t = computeMonthTotals(_monthCloseKey);
-    const [y, m] = _monthCloseKey.split('-');
-    const label = new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    const label = formatPeriodName(_monthCloseKey);
 
-    // Simpan snapshot ke riwayat
+    // Simpan snapshot ke riwayat. Pemasukan TIDAK dihapus: semua hitungan sudah
+    // dipisah per periode, jadi periode baru otomatis mulai dari Rp 0.
     monthlyHistory.push({
         id: 'month_' + _monthCloseKey,
         monthKey: _monthCloseKey,
@@ -1256,13 +1440,10 @@ window.confirmMonthClose = function() {
         closedDate: new Date().toISOString().slice(0, 10)
     });
 
-    // Reset pemasukan bulan ini ke 0 (hapus income entries bulan tsb)
-    incomeEntries = incomeEntries.filter(inc => !(inc.date && inc.date.startsWith(_monthCloseKey)));
-
-    saveDataToCloud().then(() => {
+    saveDataToCloud().then((ok) => {
         closeMonthCloseModal();
         renderBeranda();
-        showToast(`Buku ${label} berhasil ditutup!`);
+        if (ok) showToast(`Buku ${label} ditutup.`);
         _monthCloseKey = null;
     });
 };
@@ -1275,7 +1456,10 @@ function renderMonthHistory() {
 
     const sorted = [...monthlyHistory].sort((a, b) => a.monthKey.localeCompare(b.monthKey));
     const totalSaved = monthlyHistory.reduce((s, m) => s + m.sisa, 0);
-    document.getElementById('monthHistoryTotal').innerText = formatRp(totalSaved);
+    const totalEl = document.getElementById('monthHistoryTotal');
+    totalEl.innerText = formatRp(totalSaved);
+    // Hijau hanya kalau memang surplus; minus = merah.
+    totalEl.className = `text-2xl md:text-3xl font-extrabold tracking-tight ${totalSaved < 0 ? 'text-rose-600' : 'text-emerald-700'}`;
 
     if(monthlyHistory.length === 0) {
         listEl.innerHTML = '';
@@ -1295,18 +1479,23 @@ function renderMonthHistory() {
             labels: recent.map(m => m.label.split(' ')[0].slice(0, 3)),
             datasets: [{
                 label: 'Sisa', data: recent.map(m => m.sisa),
-                backgroundColor: '#10b981', borderRadius: 6
+                backgroundColor: recent.map(m => m.sisa < 0 ? '#e11d48' : '#059669'), borderRadius: 6
             }]
         },
+        plugins: [barValueLabels],
         options: {
             responsive: true, maintainAspectRatio: false,
+            // ruang untuk label nilai di atas batang plus & di bawah batang minus
+            layout: { padding: { top: 22, bottom: 4 } },
             plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => formatRp(c.raw) } } },
             scales: {
-                y: { beginAtZero: true, grid: { color: Chart.defaults.borderColor }, ticks: { display: false } },
+                y: { beginAtZero: true, grace: '12%', grid: zeroLineGrid, border: { display: false }, ticks: { display: false } },
                 x: { grid: { display: false } }
             }
         }
     });
+    document.getElementById('monthHistoryChart').setAttribute('aria-label',
+        `Sisa tiap periode: ${recent.map(m => `${m.label} ${formatRp(m.sisa)}`).join(', ')}`);
 
     // Detail list (terbaru dulu)
     listEl.innerHTML = [...sorted].reverse().map(m => `
@@ -1314,27 +1503,18 @@ function renderMonthHistory() {
             <div class="flex items-center justify-between mb-3">
                 <div>
                     <h4 class="font-extrabold text-slate-800 text-base">${m.label}</h4>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide mt-0.5">Ditutup ${new Date(m.closedDate + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</p>
+                    <p class="text-xs text-slate-500 font-semibold mt-0.5">Ditutup ${new Date(m.closedDate + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</p>
                 </div>
                 <div class="text-right">
-                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Sisa</p>
-                    <p class="text-lg font-black ${m.sisa < 0 ? 'text-rose-500' : 'text-emerald-600'}">${formatRp(m.sisa)}</p>
+                    <p class="text-xs font-semibold text-slate-500">Sisa</p>
+                    <p class="text-lg font-extrabold ${m.sisa < 0 ? 'text-rose-600' : 'text-emerald-700'}">${formatRp(m.sisa)}</p>
                 </div>
             </div>
-            <div class="grid grid-cols-3 gap-2 text-center">
-                <div class="bg-emerald-50 rounded-xl p-2 border border-emerald-100">
-                    <p class="text-[8px] font-bold text-emerald-600 uppercase tracking-widest">Masuk</p>
-                    <p class="text-[11px] font-bold text-emerald-700 mt-0.5">${formatRp(m.pemasukan)}</p>
-                </div>
-                <div class="bg-rose-50 rounded-xl p-2 border border-rose-100">
-                    <p class="text-[8px] font-bold text-rose-500 uppercase tracking-widest">Keluar</p>
-                    <p class="text-[11px] font-bold text-rose-600 mt-0.5">${formatRp(m.pengeluaran)}</p>
-                </div>
-                <div class="bg-sky-50 rounded-xl p-2 border border-sky-100">
-                    <p class="text-[8px] font-bold text-sky-500 uppercase tracking-widest">Nabung</p>
-                    <p class="text-[11px] font-bold text-sky-600 mt-0.5">${formatRp(m.tabungan)}</p>
-                </div>
-            </div>
+            <dl class="grid grid-cols-3 gap-2 border-t border-slate-100 pt-3">
+                <div><dt class="text-xs font-semibold text-slate-500">Masuk</dt><dd class="text-sm font-bold text-slate-800 mt-0.5">${formatRp(m.pemasukan)}</dd></div>
+                <div><dt class="text-xs font-semibold text-slate-500">Keluar</dt><dd class="text-sm font-bold text-slate-800 mt-0.5">${formatRp(m.pengeluaran)}</dd></div>
+                <div><dt class="text-xs font-semibold text-slate-500">Nabung</dt><dd class="text-sm font-bold text-slate-800 mt-0.5">${formatRp(m.tabungan)}</dd></div>
+            </dl>
         </div>
     `).join('');
 }
@@ -1343,16 +1523,48 @@ function renderMonthHistory() {
 Chart.defaults.color = '#64748b';
 Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
 
+// "Rp 9,3 jt" / "Rp 350 rb" — ringkas untuk label grafik di layar HP.
+function formatRpShort(n) {
+    const a = Math.abs(n), s = n < 0 ? '−' : '';
+    if (a >= 1e6) return `${s}Rp ${(a / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt`;
+    if (a >= 1e3) return `${s}Rp ${Math.round(a / 1e3).toLocaleString('id-ID')} rb`;
+    return `${s}Rp ${a}`;
+}
+
+// Tulis nilai langsung di ujung tiap batang (di bawah batang kalau minus),
+// supaya angka terbaca tanpa tap tooltip dan tanpa sumbu Y.
+const barValueLabels = {
+    id: 'barValueLabels',
+    afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        const values = chart.data.datasets[0].data;
+        ctx.save();
+        ctx.font = "700 11px 'Plus Jakarta Sans', sans-serif";
+        ctx.fillStyle = Chart.defaults.color;
+        ctx.textAlign = 'center';
+        chart.getDatasetMeta(0).data.forEach((bar, i) => {
+            const v = values[i];
+            if (!v) return;
+            ctx.textBaseline = v < 0 ? 'top' : 'bottom';
+            ctx.fillText(formatRpShort(v), bar.x, v < 0 ? bar.y + 4 : bar.y - 4);
+        });
+        ctx.restore();
+    }
+};
+
+// Garis nol dipertegas: batas surplus vs minus harus terlihat jelas.
+const zeroLineGrid = {
+    color: (c) => c.tick && c.tick.value === 0 ? (document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b') : Chart.defaults.borderColor,
+    lineWidth: (c) => c.tick && c.tick.value === 0 ? 1.5 : 1,
+};
+
 let catChartIns, compChartIns, weekChartIns;
 
 function renderMonthly() {
-    const now = new Date();
-    const currM = now.getMonth();
-    const currY = now.getFullYear();
-    
-    let lastM = currM - 1;
-    let lastY = currY;
-    if (lastM < 0) { lastM = 11; lastY = currY - 1; }
+    // Periode gajian (25–24), sama dengan Beranda & Riwayat Bulanan.
+    const thisKey = getPeriodKey(new Date());
+    const lastKey = prevPeriodKey(thisKey);
+    document.getElementById('moPeriodLabel').innerText = `Periode ${formatPeriodName(thisKey)}, ${formatPeriodRange(thisKey)}.`;
 
     let totalThisM = 0;
     let totalLastM = 0;
@@ -1362,7 +1574,8 @@ function renderMonthly() {
     const catAgg = {};
 
     expenses.forEach(ex => {
-        const d = new Date(ex.date);
+        if(!ex.date) return;
+        const key = getPeriodKey(ex.date);
         const amt = ex.amount;
         const isTabungan = ex.type === 'tabungan';
 
@@ -1372,12 +1585,12 @@ function renderMonthly() {
         // Total Pengeluaran HANYA menjumlah jenis "pengeluaran" — tabungan & pemasukan tidak dihitung.
         if(ex.type !== 'pengeluaran') return;
 
-        if(d.getMonth() === currM && d.getFullYear() === currY) {
+        if(key === thisKey) {
             totalThisM += amt;
             catAgg[ex.category] = (catAgg[ex.category] || 0) + amt;
         }
 
-        if(d.getMonth() === lastM && d.getFullYear() === lastY) {
+        if(key === lastKey) {
             totalLastM += amt;
         }
     });
@@ -1386,37 +1599,40 @@ function renderMonthly() {
     document.getElementById('moDanaDarurat').innerText = formatRp(sumDarurat);
     document.getElementById('moLiburan').innerText = formatRp(sumLiburan);
     document.getElementById('moLastMonth').innerText = formatRp(totalLastM);
+    // Rp 0 tanpa penjelasan dilarang (DESIGN_BRIEF) — beri keterangan.
+    document.getElementById('moDanaDaruratNote').classList.toggle('hidden', sumDarurat > 0);
+    document.getElementById('moLiburanNote').classList.toggle('hidden', sumLiburan > 0);
 
     const trendBadge = document.getElementById('trendBadge');
     if(totalLastM === 0) {
-        trendBadge.innerText = 'N/A';
-        trendBadge.className = 'text-xs font-bold bg-slate-100 border border-slate-200 text-slate-500 px-2 py-1 rounded-md shadow-sm';
+        trendBadge.innerText = 'Belum ada data';
+        trendBadge.className = 'text-xs font-bold bg-slate-100 border border-slate-200 text-slate-500 px-2 py-1 rounded-md';
     } else {
         const diff = totalThisM - totalLastM;
         const pct = Math.abs((diff / totalLastM) * 100).toFixed(1);
         if(diff > 0) {
-            trendBadge.className = 'text-xs font-bold bg-rose-50 border border-rose-200 text-rose-500 px-2 py-1 rounded-md shadow-sm';
-            trendBadge.innerHTML = `<i class='bx bx-trending-up'></i> Naik ${pct}%`;
+            trendBadge.className = 'text-xs font-bold bg-rose-50 border border-rose-200 text-rose-700 px-2 py-1 rounded-md';
+            trendBadge.innerHTML = `<i class='bx bx-trending-up' aria-hidden="true"></i> Naik ${pct}%`;
         } else {
-            trendBadge.className = 'text-xs font-bold bg-emerald-50 border border-emerald-200 text-emerald-600 px-2 py-1 rounded-md shadow-sm';
-            trendBadge.innerHTML = `<i class='bx bx-trending-down'></i> Turun ${pct}%`;
+            trendBadge.className = 'text-xs font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-1 rounded-md';
+            trendBadge.innerHTML = `<i class='bx bx-trending-down' aria-hidden="true"></i> Turun ${pct}%`;
         }
     }
 
     const ctxCat = document.getElementById('categoryChart').getContext('2d');
-    if(catChartIns) catChartIns.destroy();
+    if(catChartIns) { catChartIns.destroy(); catChartIns = null; }
     
-    const catLabels = Object.keys(catAgg);
-    const catData = Object.values(catAgg);
-    const catBg = ['#f97316', '#ef4444', '#3b82f6', '#a855f7', '#10b981', '#06b6d4', '#6b7280'];
+    // Urut terbesar dulu: irisan terbesar mulai dari jam 12 (ui-ux-pro-max: chart › Part-to-Whole).
+    const catEntries = Object.entries(catAgg).sort((a, b) => b[1] - a[1]);
+    const catLabels = catEntries.map(e => e[0]);
+    const catData = catEntries.map(e => e[1]);
+    // Warna tetap per kategori (bukan per urutan), sama dengan chip di Riwayat.
+    const catBg = catLabels.map(c => CATEGORY_CHART_COLORS[c] || CATEGORY_CHART_COLORS['Lainnya']);
 
-    if(catData.length === 0) {
-        catChartIns = new Chart(ctxCat, {
-            type: 'doughnut',
-            data: { labels: ['No Data'], datasets: [{ data: [1], backgroundColor: ['#374151'] }] },
-            options: { responsive: true, maintainAspectRatio: false, cutout: '80%', plugins: { legend: {display: false}} }
-        });
-    } else {
+    // Grafik kosong dilarang (DESIGN_BRIEF) — tampilkan keterangan.
+    document.getElementById('categoryChart').classList.toggle('hidden', catData.length === 0);
+    document.getElementById('categoryEmpty').classList.toggle('hidden', catData.length > 0);
+    if(catData.length > 0) {
         catChartIns = new Chart(ctxCat, {
             type: 'doughnut',
             data: {
@@ -1426,36 +1642,54 @@ function renderMonthly() {
             options: {
                 responsive: true, maintainAspectRatio: false, cutout: '70%',
                 plugins: {
-                    legend: { position: 'right', labels: { usePointStyle: true, color: Chart.defaults.color } },
+                    legend: { display: false }, // diganti daftar berlabel di bawah grafik
                     tooltip: { callbacks: { label: (c) => ` ${c.label}: ${formatRp(c.raw)}` } }
                 }
             }
         });
     }
 
+    // Label langsung: nama, nominal, dan persentase tiap kategori (terbesar dulu).
+    const catTotal = catData.reduce((s, v) => s + v, 0);
+    const catRows = catLabels.map((c, i) => ({ c, v: catData[i], color: catBg[i] })).sort((a, b) => b.v - a.v);
+    document.getElementById('categoryList').innerHTML = catRows.map(r => `
+        <li class="flex items-center gap-3 py-2.5">
+            <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:${r.color}" aria-hidden="true"></span>
+            <span class="flex-1 text-sm font-semibold text-slate-700">${r.c}</span>
+            <span class="text-sm font-bold text-slate-800">${formatRp(r.v)}</span>
+            <span class="w-12 text-right text-xs font-semibold text-slate-500">${Math.round(r.v / catTotal * 100)}%</span>
+        </li>`).join('');
+    document.getElementById('categoryChart').setAttribute('aria-label',
+        catRows.length ? `Pengeluaran per kategori: ${catRows.map(r => `${r.c} ${formatRp(r.v)}`).join(', ')}` : 'Belum ada pengeluaran');
+
     const ctxComp = document.getElementById('comparisonChart').getContext('2d');
     if(compChartIns) compChartIns.destroy();
 
+    const monthOnly = (k) => periodKeyToDate(k).toLocaleDateString('id-ID', { month: 'long' });
     compChartIns = new Chart(ctxComp, {
         type: 'bar',
         data: {
-            labels: ['Bulan Lalu', 'Bulan Ini'],
+            labels: [monthOnly(lastKey), `${monthOnly(thisKey)} (sekarang)`],
             datasets: [{
                 label: 'Total Pengeluaran',
                 data: [totalLastM, totalThisM],
-                backgroundColor: ['#6b7280', '#ef4444'],
+                backgroundColor: ['#94a3b8', '#2563eb'],
                 borderRadius: 6
             }]
         },
+        plugins: [barValueLabels],
         options: {
             responsive: true, maintainAspectRatio: false,
+            layout: { padding: { top: 22 } },
             plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => formatRp(c.raw) } } },
             scales: {
-                y: { beginAtZero: true, grid: { color: Chart.defaults.borderColor }, ticks: { display: false } },
+                y: { beginAtZero: true, grid: { display: false }, border: { display: false }, ticks: { display: false } },
                 x: { grid: { display: false } }
             }
         }
     });
+    document.getElementById('comparisonChart').setAttribute('aria-label',
+        `Total pengeluaran ${monthOnly(lastKey)} ${formatRp(totalLastM)}, ${monthOnly(thisKey)} ${formatRp(totalThisM)}`);
 }
 
 function renderWeekly() {
@@ -1471,7 +1705,7 @@ function renderWeekly() {
 
     expenses.forEach(ex => {
         if(ex.type !== 'pengeluaran') return; // Weekly tracking hanya untuk pengeluaran
-        const d = new Date(ex.date);
+        const d = new Date(ex.date + 'T00:00:00'); // tanggal lokal, bukan UTC
         if(d >= weekStart && d <= now) {
             const amt = ex.amount;
             totalWeek += amt;
@@ -1484,6 +1718,9 @@ function renderWeekly() {
     });
 
     document.getElementById('wkTotal').innerText = formatRp(totalWeek);
+    // Grafik kosong dilarang (DESIGN_BRIEF) — ganti dengan keterangan + ajakan.
+    document.getElementById('weeklyChartWrap').classList.toggle('hidden', totalWeek === 0);
+    document.getElementById('weeklyEmpty').classList.toggle('hidden', totalWeek > 0);
 
     const ctxWk = document.getElementById('weeklyChart').getContext('2d');
     if(weekChartIns) weekChartIns.destroy();
@@ -1503,11 +1740,14 @@ function renderWeekly() {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => formatRp(c.raw) } } },
             scales: {
-                y: { beginAtZero: true, grid: { color: Chart.defaults.borderColor } },
+                y: { beginAtZero: true, grid: { color: Chart.defaults.borderColor }, ticks: { maxTicksLimit: 5, callback: (v) => formatRpShort(v) } },
                 x: { grid: { display: false } }
             }
         }
     });
+    const hari = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    document.getElementById('weeklyChart').setAttribute('aria-label',
+        `Pengeluaran per hari minggu ini: ${dailySums.map((v, i) => `${hari[i]} ${formatRp(v)}`).join(', ')}`);
 
     const listHtml = Object.entries(catSums).sort((a,b)=>b[1]-a[1]).map(([cat, amt]) => {
         const colorClass = catColors[cat] || catColors['Lainnya'];
@@ -1543,7 +1783,7 @@ window.exportCSV = function() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `FinTracker_Export_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute("download", `Keuangan_Rahma_${new Date().toISOString().slice(0,10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1556,18 +1796,18 @@ window.clearAllExpenses = function() {
         return;
     }
     showConfirm({
-        title: '⚠️ Hapus Semua Data',
+        title: 'Hapus semua transaksi',
         message: 'Semua riwayat transaksi (termasuk pembayaran dari Planner) akan dihapus secara permanen. Aksi ini TIDAK bisa dibatalkan.',
-        okLabel: 'Ya, Hapus Semua',
+        okLabel: 'Ya, hapus semua',
         okClass: 'bg-red-600 hover:bg-red-700',
         iconClass: 'bx bx-error-circle',
         iconBg: 'bg-red-500/20 text-red-400'
     }, (confirmed) => {
         if(!confirmed) return;
         expenses = [];
-        saveDataToCloud().then(() => {
+        saveDataToCloud().then((ok) => {
             renderHistory();
-            showToast('Semua data berhasil dihapus!', true);
+            if (ok) showToast('Semua transaksi dihapus.');
         });
     });
 };
@@ -1575,8 +1815,7 @@ window.clearAllExpenses = function() {
 // --- Planner Preview Sheet ---
 window.openPlannerPreview = function() {
     const monthKey = getPlannerMonthKey(plannerViewingDate);
-    const monthName = plannerViewingDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-    document.getElementById('previewMonthLabel').textContent = monthName;
+    document.getElementById('previewMonthLabel').textContent = `${formatPeriodName(monthKey)}, ${formatPeriodRange(monthKey)}`;
 
     let totalEstimasi = 0, totalDibayar = 0, lunasCount = 0, belumCount = 0;
 
@@ -1596,16 +1835,14 @@ window.openPlannerPreview = function() {
     groupsToRender.forEach(groupName => {
         if(!groupedItems[groupName] || groupedItems[groupName].length === 0) return;
 
-        const groupHeader = document.createElement('p');
-        groupHeader.className = 'text-[10px] font-bold uppercase tracking-widest text-blue-400 mt-3 mb-1 px-1';
+        const groupHeader = document.createElement('h4');
+        groupHeader.className = 'text-xs font-bold text-slate-500 mt-3 mb-1 px-1';
         groupHeader.textContent = groupLabels[groupName] || groupName;
         listEl.appendChild(groupHeader);
 
         groupedItems[groupName].forEach(item => {
             totalEstimasi += item.amount;
-            const amountPaid = expenses
-                .filter(ex => ex.plannerRef === item.id && ex.date.startsWith(monthKey))
-                .reduce((sum, ex) => sum + ex.amount, 0);
+            const amountPaid = getPlannerPaid(item);
             totalDibayar += amountPaid;
             const sisa = item.amount - amountPaid;
             const isLunas = sisa <= 0;
@@ -1615,12 +1852,12 @@ window.openPlannerPreview = function() {
             row.className = `flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl ${isLunas ? 'bg-emerald-50 border border-emerald-100' : 'bg-white border border-slate-200 shadow-sm'}`;
             row.innerHTML = `
                 <div class="flex items-center gap-2 min-w-0">
-                    <i class='bx ${isLunas ? 'bx-check-circle text-emerald-500' : 'bx-circle text-slate-300'} text-lg flex-shrink-0'></i>
+                    <i class='bx ${isLunas ? 'bx-check-circle text-emerald-600' : 'bx-circle text-slate-500'} text-lg flex-shrink-0' aria-hidden="true"></i>
                     <span class="text-sm font-semibold text-slate-800 truncate">${item.name}</span>
                 </div>
                 <div class="text-right flex-shrink-0">
-                    <p class="text-xs font-black ${isLunas ? 'text-emerald-500' : 'text-rose-500'}">${isLunas ? 'LUNAS' : formatRp(sisa)}</p>
-                    <p class="text-[10px] text-slate-400 font-bold">${formatRp(item.amount)}</p>
+                    <p class="text-sm font-extrabold ${isLunas ? 'text-emerald-700' : 'text-slate-800'}">${isLunas ? 'Lunas' : formatRp(sisa)}</p>
+                    <p class="text-xs text-slate-500 font-semibold">dari ${formatRp(item.amount)}</p>
                 </div>
             `;
             listEl.appendChild(row);
@@ -1669,7 +1906,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
 
         if (!res.ok) {
-            showToast('Terjadi kesalahan pada server saat mengambil data.', true);
+            showToast('Data gagal dimuat dari server. Muat ulang halaman sebentar lagi.', true);
         } else {
             // Berhasil
             const data = await res.json();
@@ -1679,10 +1916,11 @@ window.addEventListener('DOMContentLoaded', async () => {
             incomeEntries = data.incomeEntries || [];
             wishlist = data.wishlist || [];
             monthlyHistory = data.monthlyHistory || [];
-            
+            dataLoaded = true; // baru sekarang aman menyimpan ke cloud
+
             // MIGRATION: Auto-assign existing items without monthKey to current active month
             let needsMigration = false;
-            const currentMonthKey = getPlannerMonthKey(new Date());
+            const currentMonthKey = getPeriodKey(new Date());
             plannerItems.forEach(item => {
                 if (!item.monthKey) {
                     item.monthKey = currentMonthKey;
@@ -1768,7 +2006,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             checkMonthClose();
         }
     } catch(err) {
-        showToast('Gagal menghubungi server.', true);
+        console.error(err);
+        showToast(dataLoaded ? 'Terjadi kesalahan saat menampilkan data. Muat ulang halaman.' : 'Tidak bisa terhubung. Cek internet, lalu muat ulang halaman.', true);
     } finally {
         toggleLoader(false);
     }

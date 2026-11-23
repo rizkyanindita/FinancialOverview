@@ -2,24 +2,24 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#f8fafc">
-    <title>Keuangan Rahma - Light Dashboard</title>
+    <title>Keuangan Rahma</title>
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Versi dikunci: CDN tanpa versi bisa berubah sendiri dan merusak tampilan -->
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
                     colors: {
-                        base: '#f8fafc',         // slate-50
                         surface: '#ffffff',      // white
                         surfaceHover: '#f1f5f9', // slate-100
                         borderLight: '#e2e8f0',  // slate-200
-                        primary: '#3b82f6',      // blue-500
+                        primary: '#2563eb',      // blue-600: teks putih di atasnya lolos WCAG AA (5.2:1)
                         accent: '#10b981',       // emerald-500
                         danger: '#ef4444',       // red-500
                     }
@@ -40,10 +40,23 @@
     <!-- Boxicons -->
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js"></script>
     <style>
         /* Modern UI Custom Utilities - Light Theme */
-        body { background-color: #f8fafc; color: #1e293b; }
+        body { background-color: #f8fafc; color: #1e293b; font-variant-numeric: tabular-nums; }
+
+        /* Angka utama Beranda: besar tapi tetap muat di HP untuk nominal 10+ digit */
+        .hero-number { font-size: clamp(2.25rem, 10vw, 3.75rem); line-height: 1.05; }
+
+        /* Fokus keyboard selalu terlihat */
+        :focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+
+        /* Umpan balik tekan tanpa menggeser layout (ui-ux-pro-max: Stable Interaction States) */
+        button:not(:disabled):active, summary:active { filter: brightness(0.93); }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        }
         .glass-panel {
             background: #ffffff;
             border: 1px solid #f1f5f9;
@@ -138,7 +151,7 @@
         html.dark .text-slate-700 { color: #e2e8f0 !important; }
         html.dark .text-slate-600 { color: #cbd5e1 !important; }
         html.dark .text-slate-500 { color: #94a3b8 !important; }
-        html.dark .text-slate-400 { color: #94a3b8 !important; }
+        html.dark .text-slate-500 { color: #94a3b8 !important; }
         html.dark .text-slate-300 { color: #cbd5e1 !important; }
         html.dark .hover\:text-slate-800:hover { color: #f1f5f9 !important; }
         html.dark .placeholder-slate-300::placeholder { color: #64748b !important; }
@@ -162,7 +175,16 @@
         html.dark [class*="bg-blue-50"] { background-color: rgba(59, 130, 246, 0.15) !important; }
         html.dark [class*="bg-sky-50"] { background-color: rgba(14, 165, 233, 0.15) !important; }
         html.dark [class*="bg-violet-50"] { background-color: rgba(139, 92, 246, 0.15) !important; }
+        html.dark [class*="bg-cyan-50"] { background-color: rgba(8, 145, 178, 0.15) !important; }
         html.dark .text-amber-800 { color: #fcd34d !important; }
+        html.dark .text-amber-700 { color: #fbbf24 !important; }
+        html.dark .text-emerald-700,
+        html.dark .text-emerald-800 { color: #34d399 !important; }
+        html.dark .border-emerald-200 { border-color: rgba(16, 185, 129, 0.35) !important; }
+        html.dark .hover\:bg-emerald-100:hover { background-color: rgba(16, 185, 129, 0.25) !important; }
+        html.dark .text-rose-600 { color: #fb7185 !important; }
+        html.dark .text-blue-700 { color: #93c5fd !important; }
+        html.dark .border-amber-200 { border-color: rgba(245, 158, 11, 0.3) !important; }
 
         html.dark ::-webkit-scrollbar-thumb { background: #475569; }
         html.dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
@@ -185,7 +207,7 @@
         }
     </style>
 </head>
-<body class="font-sans antialiased min-h-screen flex flex-col md:flex-row pb-[80px] md:pb-0 overflow-x-hidden selection:bg-blue-100 selection:text-blue-900">
+<body class="font-sans antialiased min-h-screen flex flex-col md:flex-row pb-[112px] md:pb-0 overflow-x-hidden selection:bg-blue-100 selection:text-blue-900">
 
     <!-- Global Loading Overlay -->
     <div id="globalLoader" class="fixed inset-0 z-[400] bg-white/80 backdrop-blur-md flex flex-col items-center justify-center hidden">
@@ -200,18 +222,18 @@
     <div class="md:hidden glass-nav flex justify-between items-center px-5 py-4 sticky top-0 z-[60] shadow-sm">
         <div class="flex items-center gap-3">
             <div class="bg-gradient-to-tr from-sky-400 to-blue-500 p-2 rounded-xl shadow-md shadow-blue-500/20">
-                <i class='bx bx-wallet text-xl text-white'></i>
+                <i class='bx bx-wallet text-xl text-white' aria-hidden="true"></i>
             </div>
-            <h1 class="text-xl font-bold tracking-tight text-slate-800">Keuangan <span class="text-gradient">Rahma</span></h1>
+            <h1 class="text-xl font-bold tracking-tight text-slate-800">Keuangan Rahma</h1>
         </div>
         <div class="flex items-center gap-2">
-            <button onclick="toggleTheme()" aria-label="Ganti tema" class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shadow-sm border border-slate-200 active:scale-95 transition-transform">
-                <i class='bx bx-moon theme-icon-light'></i>
-                <i class='bx bx-sun theme-icon-dark'></i>
+            <button onclick="toggleTheme()" aria-label="Ganti tema" class="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shadow-sm border border-slate-200 active:scale-95 transition-transform">
+                <i class='bx bx-moon theme-icon-light' aria-hidden="true"></i>
+                <i class='bx bx-sun theme-icon-dark' aria-hidden="true"></i>
             </button>
-            <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shadow-sm border border-slate-200">
-                <i class='bx bx-user'></i>
-            </div>
+            <button onclick="switchTab('panduan')" aria-label="Panduan" title="Panduan" class="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shadow-sm border border-slate-200 active:scale-95 transition-transform">
+                <i class='bx bx-help-circle text-xl' aria-hidden="true"></i>
+            </button>
         </div>
     </div>
 
@@ -219,188 +241,188 @@
     <nav class="hidden md:flex w-72 bg-white flex-shrink-0 h-screen sticky top-0 z-50 flex-col border-r border-slate-200 shadow-sm">
         <div class="p-8 flex items-center gap-3 mb-4">
             <div class="bg-gradient-to-tr from-sky-400 to-blue-500 p-2.5 rounded-xl shadow-md shadow-blue-500/20">
-                <i class='bx bx-wallet text-2xl text-white'></i>
+                <i class='bx bx-wallet text-2xl text-white' aria-hidden="true"></i>
             </div>
-            <h1 class="text-2xl font-extrabold tracking-tight text-slate-800">Fin<span class="text-gradient">Tracker</span></h1>
+            <h1 class="text-2xl font-extrabold tracking-tight text-slate-800">Keuangan Rahma</h1>
         </div>
         
         <div class="px-6 mb-4">
-            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-2">Menu Utama</p>
+            <p class="text-xs font-bold text-slate-500 mb-3 px-2">Menu utama</p>
         </div>
 
         <ul class="flex flex-col gap-1.5 px-4 flex-1">
             <li>
                 <button onclick="switchTab('beranda')" id="nav-beranda" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative active">
-                    <i class='bx bxs-home text-xl'></i>
+                    <i class='bx bxs-home text-xl' aria-hidden="true"></i>
                     <span class="font-bold text-sm">Beranda</span>
                 </button>
             </li>
             <li>
                 <button onclick="switchTab('monthly')" id="nav-monthly" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative">
-                    <i class='bx bxs-dashboard text-xl'></i>
-                    <span class="font-bold text-sm">Monthly Dashboard</span>
+                    <i class='bx bxs-dashboard text-xl' aria-hidden="true"></i>
+                    <span class="font-bold text-sm">Analisis bulanan</span>
                 </button>
             </li>
             <li>
                 <button onclick="switchTab('weekly')" id="nav-weekly" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative">
-                    <i class='bx bx-line-chart text-xl'></i>
-                    <span class="font-bold text-sm">Weekly Tracking</span>
+                    <i class='bx bx-line-chart text-xl' aria-hidden="true"></i>
+                    <span class="font-bold text-sm">Pengeluaran mingguan</span>
                 </button>
             </li>
             <li>
                 <button onclick="switchTab('planner')" id="nav-planner" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative">
-                    <i class='bx bx-layer text-xl'></i>
-                    <span class="font-bold text-sm">Planner Rutin</span>
+                    <i class='bx bx-layer text-xl' aria-hidden="true"></i>
+                    <span class="font-bold text-sm">Planner rutin</span>
                 </button>
             </li>
             <li>
                 <button onclick="switchTab('wishlist')" id="nav-wishlist" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative">
-                    <i class='bx bx-star text-xl'></i>
+                    <i class='bx bx-star text-xl' aria-hidden="true"></i>
                     <span class="font-bold text-sm">Wishlist</span>
                 </button>
             </li>
             <li>
                 <button onclick="switchTab('input')" id="nav-input" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative">
-                    <i class='bx bx-plus-circle text-xl'></i>
-                    <span class="font-bold text-sm">Input Manual</span>
+                    <i class='bx bx-plus-circle text-xl' aria-hidden="true"></i>
+                    <span class="font-bold text-sm">Input manual</span>
                 </button>
             </li>
             <li>
                 <button onclick="switchTab('history')" id="nav-history" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative">
-                    <i class='bx bx-wallet-alt text-xl'></i>
-                    <span class="font-bold text-sm">Data & Riwayat</span>
+                    <i class='bx bx-wallet-alt text-xl' aria-hidden="true"></i>
+                    <span class="font-bold text-sm">Riwayat transaksi</span>
                 </button>
             </li>
             <li>
                 <button onclick="switchTab('monthhistory')" id="nav-monthhistory" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative">
-                    <i class='bx bx-calendar-check text-xl'></i>
-                    <span class="font-bold text-sm">Riwayat Bulanan</span>
+                    <i class='bx bx-calendar-check text-xl' aria-hidden="true"></i>
+                    <span class="font-bold text-sm">Riwayat bulanan</span>
                 </button>
             </li>
             <li>
                 <button onclick="switchTab('panduan')" id="nav-panduan" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 rounded-r-xl transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-50 relative">
-                    <i class='bx bx-help-circle text-xl'></i>
+                    <i class='bx bx-help-circle text-xl' aria-hidden="true"></i>
                     <span class="font-bold text-sm">Panduan</span>
                 </button>
             </li>
         </ul>
         <div class="p-6 border-t border-slate-100 space-y-3">
             <button onclick="toggleTheme()" class="w-full flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition-all text-sm font-bold border border-slate-200 shadow-sm hover:shadow-md">
-                <span class="theme-icon-light flex items-center gap-2"><i class='bx bx-moon text-lg'></i> Mode Gelap</span>
-                <span class="theme-icon-dark flex items-center gap-2"><i class='bx bx-sun text-lg'></i> Mode Terang</span>
+                <span class="theme-icon-light flex items-center gap-2"><i class='bx bx-moon text-lg' aria-hidden="true"></i> Mode gelap</span>
+                <span class="theme-icon-dark flex items-center gap-2"><i class='bx bx-sun text-lg' aria-hidden="true"></i> Mode terang</span>
             </button>
             <button onclick="exportCSV()" class="w-full flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition-all text-sm font-bold border border-slate-200 shadow-sm hover:shadow-md">
-                <i class='bx bx-export text-lg'></i> Export Data
+                <i class='bx bx-export text-lg' aria-hidden="true"></i> Export data
             </button>
         </div>
     </nav>
 
     <!-- Mobile Floating Bottom Navigation -->
     <nav class="md:hidden fixed bottom-5 left-4 right-4 glass-nav z-[60] flex justify-around p-2 rounded-2xl shadow-xl shadow-slate-300/50">
-        <button onclick="switchTab('beranda')" id="nav-beranda-m" class="nav-btn-m active relative flex flex-col items-center justify-center p-2 text-slate-400 w-14 transition-all">
-            <i class='bx bxs-home text-2xl mb-1'></i>
-            <span class="text-[9px] font-bold tracking-wide">Beranda</span>
+        <button onclick="switchTab('beranda')" id="nav-beranda-m" class="nav-btn-m active relative flex flex-col items-center justify-center p-2 text-slate-500 w-14 transition-all">
+            <i class='bx bxs-home text-2xl mb-1' aria-hidden="true"></i>
+            <span class="text-[11px] font-bold">Beranda</span>
         </button>
-        <button onclick="switchTab('wishlist')" id="nav-wishlist-m" class="nav-btn-m relative flex flex-col items-center justify-center p-2 text-slate-400 w-14 transition-all">
-            <i class='bx bx-star text-2xl mb-1'></i>
-            <span class="text-[9px] font-bold tracking-wide">Wishlist</span>
+        <button onclick="switchTab('wishlist')" id="nav-wishlist-m" class="nav-btn-m relative flex flex-col items-center justify-center p-2 text-slate-500 w-14 transition-all">
+            <i class='bx bx-star text-2xl mb-1' aria-hidden="true"></i>
+            <span class="text-[11px] font-bold">Wishlist</span>
         </button>
         <!-- Highlighted Center Action -->
         <button onclick="switchTab('input')" id="nav-input-m" class="nav-btn-m relative flex flex-col items-center justify-center p-0 w-14 -mt-6 transition-all group">
             <div class="bg-gradient-to-tr from-sky-400 to-blue-500 rounded-full w-14 h-14 flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-105 transition-transform border-[3px] border-white">
-                <i class='bx bx-plus text-3xl text-white'></i>
+                <i class='bx bx-plus text-3xl text-white' aria-hidden="true"></i>
             </div>
-            <span class="text-[9px] font-bold tracking-wide text-slate-500 mt-1">Input</span>
+            <span class="text-[11px] font-bold text-slate-500 mt-1">Input</span>
         </button>
-        <button onclick="switchTab('planner')" id="nav-planner-m" class="nav-btn-m relative flex flex-col items-center justify-center p-2 text-slate-400 w-14 transition-all">
-            <i class='bx bx-layer text-2xl mb-1'></i>
-            <span class="text-[9px] font-bold tracking-wide">Planner</span>
+        <button onclick="switchTab('planner')" id="nav-planner-m" class="nav-btn-m relative flex flex-col items-center justify-center p-2 text-slate-500 w-14 transition-all">
+            <i class='bx bx-layer text-2xl mb-1' aria-hidden="true"></i>
+            <span class="text-[11px] font-bold">Planner</span>
         </button>
-        <button onclick="switchTab('history')" id="nav-history-m" class="nav-btn-m relative flex flex-col items-center justify-center p-2 text-slate-400 w-14 transition-all">
-            <i class='bx bx-wallet-alt text-2xl mb-1'></i>
-            <span class="text-[9px] font-bold tracking-wide">Data</span>
+        <button onclick="switchTab('history')" id="nav-history-m" class="nav-btn-m relative flex flex-col items-center justify-center p-2 text-slate-500 w-14 transition-all">
+            <i class='bx bx-wallet-alt text-2xl mb-1' aria-hidden="true"></i>
+            <span class="text-[11px] font-bold">Riwayat</span>
         </button>
     </nav>
 
     <!-- Main Content -->
     <main class="flex-1 p-4 md:p-10 overflow-y-auto w-full mx-auto relative bg-slate-50">
         
-        <!-- Decorative Background Elements -->
-        <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-100/40 rounded-full blur-[100px] pointer-events-none z-0"></div>
-        <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-100/30 rounded-full blur-[80px] pointer-events-none z-0"></div>
-
         <div class="relative z-10 max-w-7xl mx-auto">
 
             <!-- ==================== BERANDA TAB ==================== -->
             <section id="tab-beranda" class="tab-content block">
                 <div class="max-w-2xl mx-auto mt-2 md:mt-8">
-                    <header class="mb-6 md:mb-8 text-center">
-                        <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-800">Halo, <span class="text-gradient">Rahma</span> 👋</h2>
-                        <p class="text-slate-500 text-sm font-medium mt-1">Begini kondisi keuangan bulan ini.</p>
+                    <header class="mb-5 md:mb-8">
+                        <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-800">Halo, Rahma 👋</h2>
+                        <p id="berandaPeriod" class="text-slate-600 text-sm font-medium mt-1">Periode ini</p>
                     </header>
 
-                    <!-- Banner Panduan (untuk pemula) -->
-                    <button onclick="switchTab('panduan')" class="w-full mb-5 flex items-center gap-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 text-left active:scale-[0.99] transition-transform shadow-sm">
-                        <span class="text-3xl flex-shrink-0">🐣</span>
-                        <div class="flex-1 min-w-0">
-                            <p class="font-extrabold text-amber-800 text-sm">Baru pertama pakai? Baca panduan dulu</p>
-                            <p class="text-amber-600 text-xs font-medium mt-0.5">Dijelaskan pelan-pelan, bahasa gampang. Cuma 2 menit! 😊</p>
-                        </div>
-                        <i class='bx bx-chevron-right text-2xl text-amber-400 flex-shrink-0'></i>
-                    </button>
-
-                    <!-- Hero: Sisa Uang Bulan Ini -->
-                    <div class="glass-panel rounded-[2rem] p-8 md:p-10 text-center shadow-xl shadow-slate-200/50">
-                        <p class="text-xs md:text-sm text-slate-400 uppercase tracking-widest font-bold mb-3">Sisa Uang Bulan Ini</p>
-                        <h1 id="berandaSisa" class="text-4xl md:text-6xl font-black tracking-tight text-slate-800">Rp 0</h1>
-                    </div>
-
-                    <!-- 4 Angka Pendukung -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-5">
-                        <div class="glass-panel rounded-2xl p-4 md:p-5 text-center">
-                            <p class="text-[10px] md:text-xs text-emerald-600 uppercase tracking-widest font-bold mb-1.5">Masuk</p>
-                            <p id="berandaMasuk" class="text-sm md:text-lg font-extrabold text-slate-800 tracking-tight">Rp 0</p>
-                        </div>
-                        <div class="glass-panel rounded-2xl p-4 md:p-5 text-center">
-                            <p class="text-[10px] md:text-xs text-rose-500 uppercase tracking-widest font-bold mb-1.5">Keluar</p>
-                            <p id="berandaKeluar" class="text-sm md:text-lg font-extrabold text-slate-800 tracking-tight">Rp 0</p>
-                        </div>
-                        <div class="glass-panel rounded-2xl p-4 md:p-5 text-center">
-                            <p class="text-[10px] md:text-xs text-sky-600 uppercase tracking-widest font-bold mb-1.5">Nabung</p>
-                            <p id="berandaNabung" class="text-sm md:text-lg font-extrabold text-slate-800 tracking-tight">Rp 0</p>
-                        </div>
-                        <div class="glass-panel rounded-2xl p-4 md:p-5 text-center">
-                            <p class="text-[10px] md:text-xs text-violet-600 uppercase tracking-widest font-bold mb-1.5">Planner</p>
-                            <p id="berandaPlanner" class="text-sm md:text-lg font-extrabold text-slate-800 tracking-tight">Rp 0</p>
-                        </div>
-                    </div>
-
-                    <!-- CTA Utama (2 tombol side-by-side) -->
-                    <div class="grid grid-cols-2 gap-3 mt-8">
-                        <button onclick="openIncomeModal()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold py-4 rounded-2xl shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] text-sm md:text-base border border-emerald-200">
-                            💵 Input Pemasukan
+                    <!-- Banner Panduan: hilang setelah Panduan pernah dibuka (tetap ada lewat tombol ? di atas) -->
+                    <div id="berandaPanduanBanner" class="hidden mb-4 flex items-stretch bg-amber-50 border border-amber-200 rounded-2xl">
+                        <button onclick="switchTab('panduan')" class="flex-1 min-w-0 flex items-center gap-3 p-4 text-left">
+                            <span class="text-3xl flex-shrink-0" aria-hidden="true">🐣</span>
+                            <span class="flex-1 min-w-0">
+                                <span class="block font-extrabold text-amber-800 text-sm">Baru pertama pakai? Baca panduan dulu</span>
+                                <span class="block text-amber-700 text-xs font-medium mt-0.5">Dijelaskan pelan-pelan, bahasa gampang. Cuma 2 menit.</span>
+                            </span>
                         </button>
-                        <button onclick="goCatatPengeluaran()" class="bg-primary hover:bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-500/30 transition-all active:scale-[0.98] text-sm md:text-base">
-                            💸 Catat Pengeluaran
+                        <button onclick="dismissPanduanBanner()" aria-label="Tutup saran panduan" title="Tutup" class="w-12 flex-shrink-0 flex items-center justify-center text-amber-700 hover:bg-amber-100 rounded-r-2xl">
+                            <i class='bx bx-x text-2xl' aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <!-- Hero: sisa uang sampai gajian (Pemasukan − Pengeluaran − Tabungan, per periode 25–24) -->
+                    <div class="glass-panel rounded-[2rem] p-6 md:p-10">
+                        <div class="flex items-center justify-between gap-3 mb-2">
+                            <p id="berandaHeroLabel" class="text-sm font-bold text-slate-600">Sisa uang sampai gajian</p>
+                            <span id="berandaPayday" class="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-full whitespace-nowrap"></span>
+                        </div>
+                        <p id="berandaSisa" class="hero-number font-extrabold tracking-tight text-slate-800">Rp 0</p>
+                        <p id="berandaHeroNote" class="text-sm text-slate-600 font-medium mt-3 leading-relaxed"></p>
+
+                        <dl class="grid grid-cols-3 gap-3 mt-6 pt-5 border-t border-slate-100">
+                            <div><dt class="text-xs font-semibold text-slate-500">Masuk</dt><dd id="berandaMasuk" class="text-sm md:text-base font-bold text-slate-800 mt-0.5">Rp 0</dd></div>
+                            <div><dt class="text-xs font-semibold text-slate-500">Keluar</dt><dd id="berandaKeluar" class="text-sm md:text-base font-bold text-slate-800 mt-0.5">Rp 0</dd></div>
+                            <div><dt class="text-xs font-semibold text-slate-500">Nabung</dt><dd id="berandaNabung" class="text-sm md:text-base font-bold text-slate-800 mt-0.5">Rp 0</dd></div>
+                        </dl>
+                    </div>
+
+                    <!-- Tagihan belum dibayar: aksi yang paling sering dipakai, langsung dari Beranda -->
+                    <section class="glass-panel rounded-[2rem] p-5 md:p-7 mt-4" aria-labelledby="berandaTagihanTitle">
+                        <div class="flex items-baseline justify-between gap-3">
+                            <h3 id="berandaTagihanTitle" class="text-lg font-extrabold text-slate-800">Tagihan belum dibayar</h3>
+                            <span id="berandaTagihanCount" class="text-xs font-semibold text-slate-500"></span>
+                        </div>
+                        <ul id="berandaTagihanList" class="divide-y divide-slate-100 mt-1"></ul>
+                        <button id="berandaTagihanMore" onclick="switchTab('planner')" class="hidden w-full mt-1 py-3 text-sm font-bold text-blue-700">Lihat tagihan lainnya</button>
+                    </section>
+
+                    <!-- Catat manual (di luar tagihan rutin) -->
+                    <div class="grid grid-cols-2 gap-3 mt-4">
+                        <button onclick="openIncomeModal()" class="min-h-[52px] bg-white hover:bg-slate-50 text-slate-800 font-bold rounded-2xl border border-slate-200 transition-colors text-sm md:text-base flex items-center justify-center gap-2">
+                            <i class='bx bx-plus-circle text-xl text-emerald-700' aria-hidden="true"></i> Catat pemasukan
+                        </button>
+                        <button onclick="goCatatPengeluaran()" class="min-h-[52px] bg-primary hover:bg-blue-700 text-white font-bold rounded-2xl transition-colors text-sm md:text-base flex items-center justify-center gap-2">
+                            <i class='bx bx-minus-circle text-xl' aria-hidden="true"></i> Catat pengeluaran
                         </button>
                     </div>
 
                     <!-- Wishlist Teaser -->
-                    <div id="berandaWishlistTeaser" class="hidden glass-panel rounded-2xl p-5 mt-5">
+                    <div id="berandaWishlistTeaser" class="hidden glass-panel rounded-2xl p-5 mt-4">
                         <button onclick="switchTab('wishlist')" class="w-full flex items-center justify-between mb-4">
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">⭐ Wishlist Terdekat</span>
-                            <span class="text-xs font-bold text-primary flex items-center gap-1">Lihat semua <i class='bx bx-chevron-right'></i></span>
+                            <span class="text-sm font-bold text-slate-700">Wishlist terdekat</span>
+                            <span class="text-sm font-bold text-blue-700 flex items-center gap-1">Lihat semua <i class='bx bx-chevron-right' aria-hidden="true"></i></span>
                         </button>
                         <div id="berandaWishlistList" class="space-y-3"></div>
                     </div>
 
-                    <!-- CTA Sekunder -->
+                    <!-- Navigasi sekunder -->
                     <div class="grid grid-cols-2 gap-3 mt-3">
-                        <button onclick="switchTab('monthly')" class="bg-white hover:bg-slate-50 text-slate-600 font-bold py-3.5 rounded-xl border border-slate-200 shadow-sm transition-all text-sm">
-                            📊 Analisis
+                        <button onclick="switchTab('monthly')" class="min-h-[48px] bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl border border-slate-200 transition-colors text-sm flex items-center justify-center gap-2">
+                            <i class='bx bx-pie-chart-alt-2 text-lg' aria-hidden="true"></i> Analisis
                         </button>
-                        <button onclick="switchTab('monthhistory')" class="bg-white hover:bg-slate-50 text-slate-600 font-bold py-3.5 rounded-xl border border-slate-200 shadow-sm transition-all text-sm">
-                            📅 Riwayat Bulanan
+                        <button onclick="switchTab('monthhistory')" class="min-h-[48px] bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl border border-slate-200 transition-colors text-sm flex items-center justify-center gap-2">
+                            <i class='bx bx-calendar-check text-lg' aria-hidden="true"></i> Riwayat bulanan
                         </button>
                     </div>
                 </div>
@@ -410,15 +432,15 @@
             <section id="tab-monthly" class="tab-content hide space-y-6 md:space-y-8">
                 <header class="flex flex-col md:flex-row md:justify-between md:items-end gap-5">
                     <div>
-                        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Monthly <span class="text-gradient">Overview</span></h2>
-                        <p class="text-slate-500 text-sm md:text-base mt-2 font-medium">Pantau arus kas bulan ini dengan santai.</p>
-                        <button onclick="switchTab('weekly')" class="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-primary bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
-                            <i class='bx bx-line-chart'></i> Lihat Tracking Mingguan
+                        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Analisis bulanan</h2>
+                        <p id="moPeriodLabel" class="text-slate-600 text-sm md:text-base mt-2 font-medium">Periode ini.</p>
+                        <button onclick="switchTab('weekly')" class="mt-3 inline-flex items-center gap-1.5 min-h-[40px] text-sm font-bold text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
+                            <i class='bx bx-line-chart' aria-hidden="true"></i> Lihat pengeluaran mingguan
                         </button>
                     </div>
                     <div class="glass-panel px-6 py-5 rounded-2xl md:min-w-[280px]">
-                        <p class="text-[11px] md:text-xs text-slate-400 uppercase tracking-widest font-bold mb-1.5">Total Pengeluaran Bulan Ini</p>
-                        <h3 class="text-3xl md:text-4xl font-black text-rose-500 tracking-tight" id="moTotalExpense">Rp 0</h3>
+                        <p class="text-sm text-slate-600 font-bold mb-1.5">Total pengeluaran periode ini</p>
+                        <h3 class="text-3xl md:text-4xl font-extrabold text-slate-800 tracking-tight" id="moTotalExpense">Rp 0</h3>
                     </div>
                 </header>
 
@@ -429,13 +451,14 @@
                     <div class="glass-panel bento-card p-5 md:p-6 rounded-3xl flex flex-col">
                         <div class="flex justify-between items-start mb-4 md:mb-6">
                             <div class="bg-emerald-50 p-3 rounded-2xl border border-emerald-100 text-emerald-500">
-                                <i class='bx bx-shield-plus text-2xl'></i>
+                                <i class='bx bx-shield-plus text-2xl' aria-hidden="true"></i>
                             </div>
-                            <span class="text-[10px] font-bold bg-slate-100 px-2.5 py-1 rounded-md text-slate-500 uppercase tracking-wide">Tujuan</span>
+                            <span class="text-xs font-bold bg-slate-100 px-2.5 py-1 rounded-md text-slate-500">Tujuan</span>
                         </div>
                         <div class="mt-auto">
-                            <p class="text-slate-500 text-xs md:text-sm font-bold mb-1">Dana Darurat</p>
+                            <p class="text-slate-600 text-xs md:text-sm font-bold mb-1">Dana Darurat</p>
                             <h3 class="text-xl md:text-2xl font-extrabold text-slate-800 tracking-tight" id="moDanaDarurat">Rp 0</h3>
+                            <p id="moDanaDaruratNote" class="hidden text-xs text-slate-500 font-medium mt-1">Belum ada setoran. Catat lewat Input → Tabungan.</p>
                         </div>
                     </div>
                     
@@ -443,29 +466,29 @@
                     <div class="glass-panel bento-card p-5 md:p-6 rounded-3xl flex flex-col">
                         <div class="flex justify-between items-start mb-4 md:mb-6">
                             <div class="bg-sky-50 p-3 rounded-2xl border border-sky-100 text-sky-500">
-                                <i class='bx bx-paper-plane text-2xl'></i>
+                                <i class='bx bx-paper-plane text-2xl' aria-hidden="true"></i>
                             </div>
-                            <span class="text-[10px] font-bold bg-slate-100 px-2.5 py-1 rounded-md text-slate-500 uppercase tracking-wide">Tujuan</span>
+                            <span class="text-xs font-bold bg-slate-100 px-2.5 py-1 rounded-md text-slate-500">Tujuan</span>
                         </div>
                         <div class="mt-auto">
-                            <p class="text-slate-500 text-xs md:text-sm font-bold mb-1">Tabungan Liburan</p>
+                            <p class="text-slate-600 text-xs md:text-sm font-bold mb-1">Tabungan Liburan</p>
                             <h3 class="text-xl md:text-2xl font-extrabold text-slate-800 tracking-tight" id="moLiburan">Rp 0</h3>
+                            <p id="moLiburanNote" class="hidden text-xs text-slate-500 font-medium mt-1">Belum ada setoran. Catat lewat Input → Tabungan.</p>
                         </div>
                     </div>
 
                     <!-- Comparison Widget -->
-                    <div class="glass-panel bento-card p-5 md:p-6 rounded-3xl col-span-2 relative overflow-hidden group bg-gradient-to-br from-white to-slate-50">
-                        <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full pointer-events-none transition-transform group-hover:scale-110"></div>
+                    <div class="glass-panel p-5 md:p-6 rounded-3xl col-span-2 relative overflow-hidden">
                         <div class="flex justify-between items-start mb-4 relative z-10">
-                            <div class="bg-blue-50 p-3 rounded-2xl border border-blue-100 text-blue-500">
-                                <i class='bx bx-trending-up text-2xl'></i>
+                            <div class="bg-blue-50 p-3 rounded-2xl border border-blue-100 text-blue-600">
+                                <i class='bx bx-bar-chart-alt-2 text-2xl' aria-hidden="true"></i>
                             </div>
                             <span id="trendBadge" class="text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm">
                                 N/A
                             </span>
                         </div>
                         <div class="mt-auto relative z-10 pt-4">
-                            <p class="text-slate-500 text-xs md:text-sm font-bold mb-1">Total Bulan Lalu (Perbandingan)</p>
+                            <p class="text-slate-600 text-xs md:text-sm font-bold mb-1">Total pengeluaran periode lalu</p>
                             <h3 class="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight" id="moLastMonth">Rp 0</h3>
                         </div>
                     </div>
@@ -475,16 +498,19 @@
                 <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-6">
                     <!-- Doughnut Chart -->
                     <div class="glass-panel p-5 md:p-7 rounded-3xl lg:col-span-2 flex flex-col">
-                        <h3 class="text-lg md:text-xl font-bold mb-6 text-slate-800">Breakdown <span class="text-slate-400 font-medium">Kategori</span></h3>
+                        <h3 class="text-lg md:text-xl font-bold mb-6 text-slate-800">Pengeluaran per kategori</h3>
                         <div class="relative flex-1 min-h-[250px] w-full flex justify-center items-center">
-                            <canvas id="categoryChart"></canvas>
+                            <canvas id="categoryChart" role="img" aria-label="Grafik pengeluaran per kategori periode ini"></canvas>
+                            <p id="categoryEmpty" class="hidden text-sm text-slate-600 font-medium text-center px-4">Belum ada pengeluaran di periode ini. Bayar tagihan di Planner atau catat lewat Input.</p>
                         </div>
+                        <!-- Label langsung (nama, nominal, %) menggantikan legenda: terbaca tanpa tap & tanpa bergantung warna -->
+                        <ul id="categoryList" class="mt-5 divide-y divide-slate-100"></ul>
                     </div>
                     <!-- Comparison Bar Chart -->
                     <div class="glass-panel p-5 md:p-7 rounded-3xl lg:col-span-3 flex flex-col">
-                        <h3 class="text-lg md:text-xl font-bold mb-6 text-slate-800">Analisis <span class="text-slate-400 font-medium">Tren Pengeluaran</span></h3>
+                        <h3 class="text-lg md:text-xl font-bold mb-6 text-slate-800">Dibanding periode lalu</h3>
                         <div class="relative flex-1 min-h-[250px] w-full">
-                            <canvas id="comparisonChart"></canvas>
+                            <canvas id="comparisonChart" role="img" aria-label="Grafik total pengeluaran periode lalu dan periode ini"></canvas>
                         </div>
                     </div>
                 </div>
@@ -493,28 +519,35 @@
             <!-- ==================== WEEKLY TRACKING TAB ==================== -->
             <section id="tab-weekly" class="tab-content hide space-y-6 md:space-y-8">
                 <header class="mb-4">
-                    <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Weekly <span class="text-gradient">Tracking</span></h2>
-                    <p class="text-slate-500 text-sm md:text-base mt-2 font-medium">Pengeluaran harian minggu ini.</p>
+                    <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Pengeluaran mingguan</h2>
+                    <p class="text-slate-600 text-sm md:text-base mt-2 font-medium">Pengeluaran harian minggu ini, Senin sampai Minggu.</p>
                 </header>
 
                 <div class="glass-panel p-5 md:p-8 rounded-3xl mb-6">
                     <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-8">
                         <div>
-                            <h3 class="text-lg md:text-xl font-bold text-slate-800">Grafik Harian</h3>
-                            <p class="text-slate-400 text-xs md:text-sm mt-1 font-medium">Pergerakan dari Senin hingga Minggu.</p>
+                            <h3 class="text-lg md:text-xl font-bold text-slate-800">Per hari</h3>
                         </div>
                         <div class="text-left md:text-right bg-slate-50 px-5 py-3 rounded-2xl border border-slate-100">
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Minggu Ini</p>
-                            <h4 class="text-2xl md:text-3xl font-black text-rose-500" id="wkTotal">Rp 0</h4>
+                            <p class="text-sm font-bold text-slate-600 mb-1">Total minggu ini</p>
+                            <h4 class="text-2xl md:text-3xl font-extrabold text-slate-800" id="wkTotal">Rp 0</h4>
                         </div>
                     </div>
-                    <div class="relative h-64 md:h-80 w-full">
-                        <canvas id="weeklyChart"></canvas>
+                    <div id="weeklyChartWrap" class="relative h-64 md:h-80 w-full">
+                        <canvas id="weeklyChart" role="img" aria-label="Grafik pengeluaran per hari minggu ini"></canvas>
+                    </div>
+                    <div id="weeklyEmpty" class="hidden text-center py-8">
+                        <p class="font-bold text-slate-700">Belum ada pengeluaran minggu ini.</p>
+                        <p class="text-sm text-slate-600 font-medium mt-1">Bayar tagihan di Planner, atau catat pengeluaran lain.</p>
+                        <div class="flex flex-col sm:flex-row gap-3 justify-center mt-5">
+                            <button onclick="switchTab('planner')" class="min-h-[44px] px-5 bg-primary text-white font-bold rounded-xl text-sm">Buka Planner</button>
+                            <button onclick="goCatatPengeluaran()" class="min-h-[44px] px-5 bg-white text-slate-700 font-bold rounded-xl text-sm border border-slate-200">Catat pengeluaran</button>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="glass-panel p-5 md:p-8 rounded-3xl">
-                    <h3 class="text-lg md:text-xl font-bold mb-6 text-slate-800">Pengeluaran <span class="text-slate-400 font-medium">per Kategori</span></h3>
+                    <h3 class="text-lg md:text-xl font-bold mb-6 text-slate-800">Pengeluaran per kategori</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="weeklyCategoryList">
                         <!-- Populated by JS -->
                     </div>
@@ -525,54 +558,48 @@
             <section id="tab-planner" class="tab-content hide space-y-6">
                 <header class="flex flex-col md:flex-row md:items-end justify-between gap-5">
                     <div>
-                        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Planner <span class="text-gradient">Rutin</span></h2>
+                        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Planner rutin</h2>
                         <p class="text-slate-500 text-sm md:text-base mt-2 font-medium" id="plannerMonthLabel">Atur kewajiban dan tagihan bulanan.</p>
                     </div>
                     <div class="flex items-center gap-2 md:gap-3 w-full md:w-auto">
-                        <div class="flex flex-1 md:flex-none justify-between items-center gap-1 glass-panel p-1.5 rounded-xl shadow-sm">
-                            <button onclick="changePlannerMonth(-1)" title="Bulan sebelumnya" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors flex-shrink-0"><i class='bx bx-chevron-left text-xl'></i></button>
+                        <div class="flex flex-1 min-w-0 md:flex-none justify-between items-center gap-1 glass-panel p-1.5 rounded-xl shadow-sm">
+                            <button onclick="changePlannerMonth(-1)" title="Periode sebelumnya" aria-label="Periode sebelumnya" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors flex-shrink-0"><i class='bx bx-chevron-left text-xl' aria-hidden="true"></i></button>
                             <div class="relative flex-1 group">
                                 <input type="month" id="plannerMonthPicker" onchange="setPlannerMonth(this.value)" title="Pilih bulan & tahun lain" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
                                 <div class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-slate-50 group-hover:bg-blue-50 border border-slate-200 group-hover:border-blue-200 transition-colors pointer-events-none">
-                                    <i class='bx bx-calendar-alt text-base text-slate-400 group-hover:text-blue-500 transition-colors'></i>
-                                    <span id="plannerCurrentMonthStr" class="font-bold text-slate-800 text-sm md:text-base min-w-[6.5rem] text-center tracking-wide group-hover:text-blue-600 transition-colors">Juni 2026</span>
-                                    <i class='bx bx-chevron-down text-sm text-slate-400 group-hover:text-blue-500 transition-colors'></i>
+                                    <i class='bx bx-calendar-alt text-base text-slate-500 group-hover:text-blue-500 transition-colors hidden sm:inline-block' aria-hidden="true"></i>
+                                    <span id="plannerCurrentMonthStr" class="font-bold text-slate-800 text-sm md:text-base text-center whitespace-nowrap group-hover:text-blue-600 transition-colors">Juni 2026</span>
+                                    <i class='bx bx-chevron-down text-sm text-slate-500 group-hover:text-blue-500 transition-colors hidden sm:inline-block' aria-hidden="true"></i>
                                 </div>
                             </div>
-                            <button onclick="changePlannerMonth(1)" title="Bulan berikutnya" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors flex-shrink-0"><i class='bx bx-chevron-right text-xl'></i></button>
+                            <button onclick="changePlannerMonth(1)" title="Periode berikutnya" aria-label="Periode berikutnya" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors flex-shrink-0"><i class='bx bx-chevron-right text-xl' aria-hidden="true"></i></button>
                         </div>
 
-                        <!-- Aksi sekunder: tampil penuh di desktop -->
+                        <!-- Ringkasan: tampil penuh di desktop (mobile pakai kartu sticky di bawah) -->
                         <div class="hidden md:flex items-center gap-3">
                             <button onclick="openPlannerPreview()" class="flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition-all text-sm font-bold border border-slate-200 shadow-sm hover:shadow-md">
-                                <i class='bx bx-grid-alt text-lg text-primary'></i> <span>Ringkasan</span>
-                            </button>
-                            <button onclick="copyPlannerFromPreviousMonth()" title="Salin dari Bulan Lalu" class="flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition-all text-sm font-bold border border-slate-200 shadow-sm hover:shadow-md">
-                                <i class='bx bx-copy text-lg text-blue-500'></i> <span>Salin sebelumnya</span>
-                            </button>
-                            <button onclick="deleteAllPlannerItems()" title="Hapus Semua di Bulan Ini" class="flex justify-center items-center gap-2 px-4 py-3 bg-white hover:bg-rose-50 text-rose-500 rounded-xl transition-all text-sm font-bold border border-rose-200 shadow-sm hover:shadow-md">
-                                <i class='bx bx-trash text-lg'></i> <span>Hapus Semua</span>
+                                <i class='bx bx-grid-alt text-lg text-primary' aria-hidden="true"></i> <span>Ringkasan</span>
                             </button>
                         </div>
 
-                        <!-- Aksi sekunder: menu "..." di mobile -->
-                        <div class="relative md:hidden">
+                        <!-- Aksi jarang & berbahaya: selalu di menu "..." (DESIGN_BRIEF: Hapus Semua tidak sejajar tombol biasa) -->
+                        <div class="relative">
                             <button onclick="togglePlannerMenu()" id="btnPlannerMenu" title="Menu lainnya" aria-label="Menu lainnya" class="w-11 h-11 flex items-center justify-center bg-white text-slate-600 rounded-xl border border-slate-200 shadow-sm">
-                                <i class='bx bx-dots-vertical-rounded text-xl'></i>
+                                <i class='bx bx-dots-vertical-rounded text-xl' aria-hidden="true"></i>
                             </button>
                             <div id="plannerMenuDropdown" class="hidden absolute right-0 top-full mt-2 w-60 glass-panel rounded-2xl shadow-xl border border-slate-100 py-2 z-30">
                                 <button onclick="copyPlannerFromPreviousMonth(); closePlannerMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors">
-                                    <i class='bx bx-copy text-lg text-blue-500'></i> Salin dari Bulan Lalu
+                                    <i class='bx bx-copy text-lg text-blue-500' aria-hidden="true"></i> Salin dari periode lalu
                                 </button>
                                 <div class="h-px bg-slate-100 my-1 mx-2"></div>
                                 <button onclick="deleteAllPlannerItems(); closePlannerMenu()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-rose-500 hover:bg-rose-50 transition-colors">
-                                    <i class='bx bx-trash text-lg'></i> Hapus Semua Bulan Ini
+                                    <i class='bx bx-trash text-lg' aria-hidden="true"></i> Hapus semua di periode ini
                                 </button>
                             </div>
                         </div>
 
-                        <button onclick="openPlannerModal()" class="flex-shrink-0 flex justify-center items-center gap-2 px-4 md:px-5 py-3 bg-gradient-to-r from-sky-400 to-blue-500 hover:opacity-90 text-white rounded-xl transition-all text-sm font-bold shadow-lg shadow-blue-500/30">
-                            <i class='bx bx-plus text-lg'></i> <span class="hidden sm:inline">Baru</span>
+                        <button onclick="openPlannerModal()" aria-label="Tambah tagihan" class="flex-shrink-0 flex justify-center items-center gap-2 min-h-[44px] px-4 md:px-5 py-3 bg-primary hover:bg-blue-700 text-white rounded-xl transition-colors text-sm font-bold">
+                            <i class='bx bx-plus text-lg' aria-hidden="true"></i> <span class="hidden sm:inline">Tambah</span>
                         </button>
                     </div>
                 </header>
@@ -580,7 +607,7 @@
                 <!-- Filter Status (Desktop, statis) -->
                 <div class="hidden md:flex gap-2">
                     <button onclick="setPlannerFilter('unpaid')" data-filter="unpaid" class="planner-filter-btn px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-primary text-white shadow-lg shadow-blue-500/30">
-                        Belum Bayar
+                        Belum bayar
                     </button>
                     <button onclick="setPlannerFilter('all')" data-filter="all" class="planner-filter-btn px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-white text-slate-600 border border-slate-200">
                         Semua
@@ -593,14 +620,14 @@
                         <div class="flex items-center justify-between mb-2.5">
                             <div class="flex items-center gap-2.5">
                                 <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-primary border border-blue-100 flex-shrink-0">
-                                    <i class='bx bx-grid-alt text-lg'></i>
+                                    <i class='bx bx-grid-alt text-lg' aria-hidden="true"></i>
                                 </div>
                                 <div>
-                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Ringkasan Bulan Ini</p>
+                                    <p class="text-xs font-bold text-slate-500">Ringkasan periode ini</p>
                                     <p class="text-sm font-black text-slate-800" id="plannerStickyAmount">Rp 0 / Rp 0</p>
                                 </div>
                             </div>
-                            <i class='bx bx-chevron-right text-2xl text-slate-300 flex-shrink-0'></i>
+                            <i class='bx bx-chevron-right text-2xl text-slate-300 flex-shrink-0' aria-hidden="true"></i>
                         </div>
                         <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                             <div id="plannerStickyProgressBar" class="bg-gradient-to-r from-emerald-400 to-primary h-full rounded-full transition-all duration-500" style="width:0%"></div>
@@ -609,7 +636,7 @@
 
                     <div class="flex gap-2">
                         <button onclick="setPlannerFilter('unpaid')" data-filter="unpaid" class="planner-filter-btn flex-1 px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-primary text-white shadow-lg shadow-blue-500/30">
-                            Belum Bayar
+                            Belum bayar
                         </button>
                         <button onclick="setPlannerFilter('all')" data-filter="all" class="planner-filter-btn flex-1 px-4 py-2.5 rounded-xl text-sm font-bold transition-all bg-white text-slate-600 border border-slate-200">
                             Semua
@@ -620,7 +647,7 @@
                 <!-- Copy Previous Month Action -->
                 <div id="btnCopyPlanner" class="hidden flex justify-center mt-6">
                     <button onclick="copyPlannerFromPreviousMonth()" class="flex items-center gap-2 px-6 py-4 bg-slate-100 hover:bg-blue-50 text-slate-500 hover:text-blue-600 rounded-2xl transition-all font-bold border border-slate-200 border-dashed hover:border-blue-300">
-                        <i class='bx bx-copy text-xl'></i> Salin Template dari Bulan Sebelumnya
+                        <i class='bx bx-copy text-xl' aria-hidden="true"></i> Salin tagihan dari periode sebelumnya
                     </button>
                 </div>
 
@@ -634,8 +661,8 @@
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse whitespace-nowrap">
                             <thead>
-                                <tr class="bg-slate-50/80 border-b border-slate-100 text-slate-400 text-xs font-bold uppercase tracking-widest">
-                                    <th class="p-5 w-1/3">Item Tagihan</th>
+                                <tr class="bg-slate-50/80 border-b border-slate-100 text-slate-500 text-xs font-bold">
+                                    <th class="p-5 w-1/3">Item tagihan</th>
                                     <th class="p-5">Estimasi</th>
                                     <th class="p-5">Dibayar</th>
                                     <th class="p-5">Sisa</th>
@@ -647,15 +674,15 @@
                             </tbody>
                             <tfoot class="border-t border-slate-200">
                                 <tr class="bg-blue-50 text-blue-700 font-bold border-t border-blue-100">
-                                    <td colspan="4" class="p-5 text-right uppercase tracking-wider text-xs">Total Estimasi Planner</td>
+                                    <td colspan="4" class="p-5 text-right text-xs">Total estimasi Planner</td>
                                     <td class="p-5 text-right text-base font-black" id="plannerTotalEstimasi">Rp 0</td>
                                 </tr>
                                 <tr class="bg-emerald-50 text-emerald-700 font-bold border-t border-emerald-100">
-                                    <td colspan="4" class="p-5 text-right uppercase tracking-wider text-xs">Sudah Dibayar (Bulan Ini)</td>
+                                    <td colspan="4" class="p-5 text-right text-xs">Sudah dibayar (periode ini)</td>
                                     <td class="p-5 text-right text-base font-black" id="plannerTotalDibayar">Rp 0</td>
                                 </tr>
-                                <tr class="bg-rose-50 text-rose-700 font-bold border-t border-rose-100">
-                                    <td colspan="4" class="p-5 text-right uppercase tracking-wider text-xs">Sisa Belum Dibayar</td>
+                                <tr class="bg-slate-50 text-slate-800 font-bold border-t border-slate-200">
+                                    <td colspan="4" class="p-5 text-right text-xs">Sisa belum dibayar</td>
                                     <td class="p-5 text-right text-lg font-black" id="plannerSisa">Rp 0</td>
                                 </tr>
                             </tfoot>
@@ -670,10 +697,10 @@
                 <div class="max-w-2xl mx-auto mt-4">
                     <header class="mb-8 md:mb-10 text-center">
                         <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-50 rounded-2xl mb-5 text-blue-500 shadow-sm border border-blue-100">
-                            <i class='bx bx-edit-alt text-3xl'></i>
+                            <i class='bx bx-edit-alt text-3xl' aria-hidden="true"></i>
                         </div>
-                        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800 mb-2">Input <span class="text-gradient">Manual</span></h2>
-                        <p class="text-slate-500 text-sm font-medium">Catat pengeluaran harian dengan cepat dan mudah.</p>
+                        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800 mb-2">Input manual</h2>
+                        <p class="text-slate-600 text-sm font-medium">Pengeluaran di luar tagihan rutin.</p>
                     </header>
 
                     <form id="expenseForm" class="glass-panel p-6 md:p-10 rounded-[2rem] space-y-6 md:space-y-8 relative overflow-hidden shadow-xl shadow-slate-200/50">
@@ -681,17 +708,17 @@
                         
                         <!-- Tanggal Section -->
                         <div class="relative z-10">
-                            <label class="block text-xs md:text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Pilih Waktu</label>
+                            <label class="block text-xs md:text-sm font-bold text-slate-500 mb-3">Pilih waktu</label>
                             
                             <div class="grid grid-cols-3 gap-2 md:gap-3 mb-4">
                                 <button type="button" onclick="setQuickDate(0)" class="quick-date-btn px-2 py-3 border border-blue-200 bg-blue-50 text-blue-600 rounded-xl text-xs md:text-sm font-bold transition-all active:scale-95 text-center shadow-sm">
-                                    Hari Ini
+                                    Hari ini
                                 </button>
                                 <button type="button" onclick="setQuickDate(-1)" class="quick-date-btn px-2 py-3 border border-slate-200 bg-white text-slate-600 rounded-xl text-xs md:text-sm font-bold transition-all active:scale-95 hover:bg-slate-50 hover:text-slate-800 text-center shadow-sm">
                                     Kemarin
                                 </button>
                                 <button type="button" onclick="setQuickDate(-2)" class="quick-date-btn px-2 py-3 border border-slate-200 bg-white text-slate-600 rounded-xl text-xs md:text-sm font-bold transition-all active:scale-95 hover:bg-slate-50 hover:text-slate-800 text-center shadow-sm">
-                                    2 Hari Lalu
+                                    2 hari lalu
                                 </button>
                             </div>
                             
@@ -700,74 +727,74 @@
                                 <div id="dateDisplay" class="w-full modern-input rounded-xl px-5 py-4 text-slate-800 text-sm md:text-base font-bold flex items-center justify-between pointer-events-none group-hover:border-blue-300 transition-colors shadow-sm">
                                     <span>Pilih tanggal...</span>
                                 </div>
-                                <div class="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-hover:text-blue-500 transition-colors">
-                                    <i class='bx bx-calendar-alt text-xl'></i>
+                                <div class="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none group-hover:text-blue-500 transition-colors">
+                                    <i class='bx bx-calendar-alt text-xl' aria-hidden="true"></i>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Nominal Section -->
                         <div class="relative z-10">
-                            <label class="block text-xs md:text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Nominal Transaksi</label>
+                            <label class="block text-xs md:text-sm font-bold text-slate-500 mb-3">Nominal transaksi</label>
                             <div class="relative shadow-sm rounded-xl">
-                                <span class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">Rp</span>
+                                <span class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-lg">Rp</span>
                                 <input type="text" inputmode="numeric" id="inpAmount" placeholder="0" required class="w-full modern-input rounded-xl pl-14 pr-5 py-4 text-slate-800 font-black text-2xl placeholder-slate-300 tracking-wide" oninput="formatInputCurrency(this)">
                             </div>
                         </div>
 
                         <!-- Jenis Transaksi -->
                         <div class="relative z-10">
-                            <label class="block text-xs md:text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Jenis Transaksi</label>
+                            <label class="block text-xs md:text-sm font-bold text-slate-500 mb-3">Jenis transaksi</label>
                             <input type="hidden" id="inpTxType" value="pengeluaran">
                             <div class="grid grid-cols-3 gap-2 md:gap-3">
                                 <button type="button" id="btnTxPengeluaran" onclick="setTxType('pengeluaran')" class="py-3.5 rounded-xl text-xs md:text-sm font-bold transition-all bg-primary text-white shadow-lg shadow-blue-500/30">
-                                    💸 Pengeluaran
+                                    Pengeluaran
                                 </button>
                                 <button type="button" id="btnTxTabungan" onclick="setTxType('tabungan')" class="py-3.5 rounded-xl text-xs md:text-sm font-bold transition-all bg-white text-slate-600 border border-slate-200">
-                                    🏦 Tabungan
+                                    Tabungan
                                 </button>
                                 <button type="button" id="btnTxPemasukan" onclick="setTxType('pemasukan')" class="py-3.5 rounded-xl text-xs md:text-sm font-bold transition-all bg-white text-slate-600 border border-slate-200">
-                                    💵 Pemasukan
+                                    Pemasukan
                                 </button>
                             </div>
                         </div>
 
                         <!-- Kategori Pengeluaran -->
                         <div class="relative z-10" id="categoryGridPengeluaran">
-                            <label class="block text-xs md:text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Pilih Kategori</label>
+                            <label class="block text-xs md:text-sm font-bold text-slate-500 mb-3">Pilih kategori</label>
                             <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                                 <label class="cursor-pointer">
                                     <input type="radio" name="category" value="Cicilan" class="peer sr-only" checked>
                                     <div class="p-3 bg-white border border-slate-200 rounded-xl text-center hover:bg-slate-50 peer-checked:bg-orange-50 peer-checked:border-orange-200 peer-checked:text-orange-600 transition-all shadow-sm peer-checked:shadow-orange-500/20 flex flex-col items-center gap-1.5">
-                                        <i class='bx bx-credit-card text-2xl text-slate-400 peer-checked:text-orange-500'></i>
+                                        <i class='bx bx-credit-card text-2xl text-slate-500 peer-checked:text-orange-500' aria-hidden="true"></i>
                                         <span class="text-xs font-bold text-slate-500 peer-checked:text-orange-600">Cicilan</span>
                                     </div>
                                 </label>
                                 <label class="cursor-pointer">
                                     <input type="radio" name="category" value="Tagihan" class="peer sr-only">
                                     <div class="p-3 bg-white border border-slate-200 rounded-xl text-center hover:bg-slate-50 peer-checked:bg-red-50 peer-checked:border-red-200 peer-checked:text-red-600 transition-all shadow-sm peer-checked:shadow-red-500/20 flex flex-col items-center gap-1.5">
-                                        <i class='bx bx-receipt text-2xl text-slate-400 peer-checked:text-red-500'></i>
+                                        <i class='bx bx-receipt text-2xl text-slate-500 peer-checked:text-red-500' aria-hidden="true"></i>
                                         <span class="text-xs font-bold text-slate-500 peer-checked:text-red-600">Tagihan</span>
                                     </div>
                                 </label>
                                 <label class="cursor-pointer">
                                     <input type="radio" name="category" value="Kebutuhan" class="peer sr-only">
                                     <div class="p-3 bg-white border border-slate-200 rounded-xl text-center hover:bg-slate-50 peer-checked:bg-blue-50 peer-checked:border-blue-200 peer-checked:text-blue-600 transition-all shadow-sm peer-checked:shadow-blue-500/20 flex flex-col items-center gap-1.5">
-                                        <i class='bx bx-cart text-2xl text-slate-400 peer-checked:text-blue-500'></i>
+                                        <i class='bx bx-cart text-2xl text-slate-500 peer-checked:text-blue-500' aria-hidden="true"></i>
                                         <span class="text-xs font-bold text-slate-500 peer-checked:text-blue-600">Kebutuhan</span>
                                     </div>
                                 </label>
                                 <label class="cursor-pointer">
                                     <input type="radio" name="category" value="Belanja" class="peer sr-only">
                                     <div class="p-3 bg-white border border-slate-200 rounded-xl text-center hover:bg-slate-50 peer-checked:bg-purple-50 peer-checked:border-purple-200 peer-checked:text-purple-600 transition-all shadow-sm peer-checked:shadow-purple-500/20 flex flex-col items-center gap-1.5">
-                                        <i class='bx bx-shopping-bag text-2xl text-slate-400 peer-checked:text-purple-500'></i>
+                                        <i class='bx bx-shopping-bag text-2xl text-slate-500 peer-checked:text-purple-500' aria-hidden="true"></i>
                                         <span class="text-xs font-bold text-slate-500 peer-checked:text-purple-600">Belanja</span>
                                     </div>
                                 </label>
                                 <label class="cursor-pointer col-span-2 md:col-span-1">
                                     <input type="radio" name="category" value="Lainnya" class="peer sr-only">
                                     <div class="p-3 bg-white border border-slate-200 rounded-xl text-center hover:bg-slate-50 peer-checked:bg-slate-100 peer-checked:border-slate-300 peer-checked:text-slate-800 transition-all shadow-sm flex items-center justify-center gap-2">
-                                        <i class='bx bx-dots-horizontal-rounded text-xl text-slate-400 peer-checked:text-slate-600'></i>
+                                        <i class='bx bx-dots-horizontal-rounded text-xl text-slate-500 peer-checked:text-slate-600' aria-hidden="true"></i>
                                         <span class="text-xs font-bold text-slate-500 peer-checked:text-slate-800">Lainnya</span>
                                     </div>
                                 </label>
@@ -776,26 +803,26 @@
 
                         <!-- Tujuan Tabungan -->
                         <div class="relative z-10 hide" id="categoryGridTabungan">
-                            <label class="block text-xs md:text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Pilih Tujuan Tabungan</label>
+                            <label class="block text-xs md:text-sm font-bold text-slate-500 mb-3">Pilih tujuan tabungan</label>
                             <div class="grid grid-cols-2 gap-3">
                                 <label class="cursor-pointer">
                                     <input type="radio" name="category" value="Dana Darurat" class="peer sr-only">
                                     <div class="p-3 bg-white border border-slate-200 rounded-xl text-center hover:bg-slate-50 peer-checked:bg-emerald-50 peer-checked:border-emerald-200 peer-checked:text-emerald-600 transition-all shadow-sm peer-checked:shadow-emerald-500/20 flex flex-col items-center gap-1.5">
-                                        <i class='bx bx-shield-plus text-2xl text-slate-400 peer-checked:text-emerald-500'></i>
+                                        <i class='bx bx-shield-plus text-2xl text-slate-500 peer-checked:text-emerald-500' aria-hidden="true"></i>
                                         <span class="text-xs font-bold text-slate-500 peer-checked:text-emerald-600">Dana Darurat</span>
                                     </div>
                                 </label>
                                 <label class="cursor-pointer">
                                     <input type="radio" name="category" value="Tabungan Liburan" class="peer sr-only">
                                     <div class="p-3 bg-white border border-slate-200 rounded-xl text-center hover:bg-slate-50 peer-checked:bg-sky-50 peer-checked:border-sky-200 peer-checked:text-sky-600 transition-all shadow-sm peer-checked:shadow-sky-500/20 flex flex-col items-center gap-1.5">
-                                        <i class='bx bx-paper-plane text-2xl text-slate-400 peer-checked:text-sky-500'></i>
+                                        <i class='bx bx-paper-plane text-2xl text-slate-500 peer-checked:text-sky-500' aria-hidden="true"></i>
                                         <span class="text-xs font-bold text-slate-500 peer-checked:text-sky-600">Tabungan Liburan</span>
                                     </div>
                                 </label>
                                 <label class="cursor-pointer col-span-2">
                                     <input type="radio" name="category" value="__custom__" id="crudTujuanCustomRadio" class="peer sr-only" onclick="document.getElementById('inpTujuanCustom').classList.remove('hide')">
                                     <div class="p-3 bg-white border border-slate-200 rounded-xl text-center hover:bg-slate-50 peer-checked:bg-slate-100 peer-checked:border-slate-300 peer-checked:text-slate-800 transition-all shadow-sm flex items-center justify-center gap-2">
-                                        <i class='bx bx-plus-circle text-xl text-slate-400 peer-checked:text-slate-600'></i>
+                                        <i class='bx bx-plus-circle text-xl text-slate-500 peer-checked:text-slate-600' aria-hidden="true"></i>
                                         <span class="text-xs font-bold text-slate-500 peer-checked:text-slate-800">Tujuan Lain...</span>
                                     </div>
                                 </label>
@@ -805,13 +832,13 @@
 
                         <!-- Deskripsi -->
                         <div class="relative z-10">
-                            <label class="block text-xs md:text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Catatan / Deskripsi</label>
+                            <label class="block text-xs md:text-sm font-bold text-slate-500 mb-3">Catatan / deskripsi</label>
                             <input type="text" id="inpDesc" placeholder="Contoh: Beli makan siang, ongkos..." class="w-full modern-input rounded-xl px-5 py-4 text-slate-800 text-sm md:text-base placeholder-slate-300 shadow-sm font-medium">
                         </div>
 
                         <div class="pt-4 md:pt-6 flex flex-col md:flex-row gap-3 relative z-10">
                             <button type="submit" class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/30 transition-all active:scale-[0.98] text-sm md:text-base">
-                                Simpan Transaksi
+                                Simpan transaksi
                             </button>
                             <button type="button" id="btnCancelEdit" onclick="cancelEdit()" class="w-full md:w-auto hidden bg-white hover:bg-slate-50 text-slate-700 font-bold py-4 px-8 rounded-xl transition-all border border-slate-200 shadow-sm text-sm md:text-base">
                                 Batal
@@ -825,22 +852,35 @@
             <section id="tab-history" class="tab-content hide space-y-6">
                 <header class="mb-6 md:mb-10 flex flex-col md:flex-row md:justify-between md:items-end gap-5">
                     <div>
-                        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Riwayat <span class="text-gradient">Data</span></h2>
-                        <p class="text-slate-500 text-sm md:text-base mt-2 font-medium">Manajemen lengkap seluruh transaksi.</p>
+                        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Riwayat transaksi</h2>
+                        <p class="text-slate-600 text-sm md:text-base mt-2 font-medium">Semua uang masuk, keluar, dan tabungan yang sudah dicatat.</p>
                     </div>
-                    
-                    <div class="flex flex-col sm:flex-row gap-3 md:items-center w-full md:w-auto">
+
+                    <div class="flex gap-3 items-center w-full md:w-auto">
                         <!-- Filter By Date -->
-                        <div class="w-full sm:w-auto relative group">
+                        <div class="flex-1 sm:flex-none relative group">
+                            <label for="historyDateFilter" class="sr-only">Saring per tanggal</label>
                             <input type="date" id="historyDateFilter" onchange="renderHistory()" class="w-full sm:w-auto modern-input rounded-xl pl-4 pr-10 py-3 text-sm text-slate-800 transition-colors cursor-pointer appearance-none shadow-sm font-semibold">
-                            <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-blue-500">
-                                <i class='bx bx-filter-alt text-lg'></i>
+                            <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 group-hover:text-blue-500">
+                                <i class='bx bx-filter-alt text-lg' aria-hidden="true"></i>
                             </div>
                         </div>
-                        
-                        <button onclick="clearAllExpenses()" class="w-full sm:w-auto flex justify-center items-center gap-2 px-5 py-3 bg-white text-danger rounded-xl border border-rose-200 text-sm font-bold hover:bg-rose-50 transition-all shadow-sm">
-                            <i class='bx bx-trash text-lg'></i> Hapus Semua
-                        </button>
+
+                        <!-- Aksi jarang & berbahaya di menu "..." (DESIGN_BRIEF) -->
+                        <details class="relative flex-shrink-0">
+                            <summary aria-label="Menu lainnya" title="Menu lainnya" class="list-none [&::-webkit-details-marker]:hidden w-11 h-11 flex items-center justify-center bg-white text-slate-600 rounded-xl border border-slate-200 shadow-sm cursor-pointer">
+                                <i class='bx bx-dots-vertical-rounded text-xl' aria-hidden="true"></i>
+                            </summary>
+                            <div class="absolute right-0 top-full mt-2 w-64 glass-panel rounded-2xl shadow-xl border border-slate-100 py-2 z-30">
+                                <button onclick="this.closest('details').open = false; exportCSV()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                                    <i class='bx bx-export text-lg' aria-hidden="true"></i> Export ke CSV
+                                </button>
+                                <div class="h-px bg-slate-100 my-1 mx-2"></div>
+                                <button onclick="this.closest('details').open = false; clearAllExpenses()" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors">
+                                    <i class='bx bx-trash text-lg' aria-hidden="true"></i> Hapus semua transaksi
+                                </button>
+                            </div>
+                        </details>
                     </div>
                 </header>
 
@@ -851,10 +891,11 @@
                 
                 <div id="emptyState" class="hidden glass-panel rounded-[2rem] p-12 text-center text-slate-500 border border-slate-100 mt-6 flex flex-col items-center">
                     <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100 mb-5 shadow-inner">
-                        <i class='bx bx-folder-open text-5xl text-slate-300'></i>
+                        <i class='bx bx-folder-open text-5xl text-slate-300' aria-hidden="true"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-700 mb-2">Belum Ada Transaksi</h3>
-                    <p class="text-slate-500 font-medium">Data yang Anda masukkan akan muncul di sini.</p>
+                    <h3 class="text-xl font-bold text-slate-700 mb-2">Belum ada transaksi</h3>
+                    <p class="text-slate-600 font-medium mb-6">Yuk catat yang pertama. Pembayaran dari Planner juga muncul di sini.</p>
+                    <button onclick="goCatatPengeluaran()" class="min-h-[44px] px-6 bg-primary text-white rounded-xl font-bold text-sm">Catat transaksi</button>
                 </div>
             </section>
 
@@ -862,22 +903,22 @@
             <section id="tab-wishlist" class="tab-content hide space-y-6">
                 <header class="flex flex-col md:flex-row md:items-end justify-between gap-5">
                     <div>
-                        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Wish<span class="text-gradient">list</span></h2>
+                        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Wishlist</h2>
                         <p class="text-slate-500 text-sm md:text-base mt-2 font-medium">Rencana pembelian besar — sisihkan sedikit demi sedikit.</p>
                     </div>
                     <button onclick="openWishlistModal()" class="flex-shrink-0 flex justify-center items-center gap-2 px-5 py-3 bg-gradient-to-r from-sky-400 to-blue-500 hover:opacity-90 text-white rounded-xl transition-all text-sm font-bold shadow-lg shadow-blue-500/30">
-                        <i class='bx bx-plus text-lg'></i> Tambah Wishlist
+                        <i class='bx bx-plus text-lg' aria-hidden="true"></i> Tambah wishlist
                     </button>
                 </header>
 
                 <!-- Ringkasan Wishlist -->
                 <div id="wishlistSummary" class="grid grid-cols-2 gap-3 md:gap-4">
                     <div class="glass-panel rounded-2xl p-4 md:p-5">
-                        <p class="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest font-bold mb-1.5">Total Target</p>
+                        <p class="text-xs md:text-xs text-slate-500 font-bold mb-1.5">Total target</p>
                         <p id="wishlistTotalTarget" class="text-base md:text-2xl font-extrabold text-slate-800 tracking-tight">Rp 0</p>
                     </div>
                     <div class="glass-panel rounded-2xl p-4 md:p-5">
-                        <p class="text-[10px] md:text-xs text-emerald-600 uppercase tracking-widest font-bold mb-1.5">Total Terkumpul</p>
+                        <p class="text-xs md:text-xs text-emerald-600 font-bold mb-1.5">Total terkumpul</p>
                         <p id="wishlistTotalCollected" class="text-base md:text-2xl font-extrabold text-emerald-600 tracking-tight">Rp 0</p>
                     </div>
                 </div>
@@ -890,10 +931,10 @@
                     <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100 mb-5 shadow-inner">
                         <span class="text-5xl">⭐</span>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-700 mb-2">Belum Ada Wishlist</h3>
+                    <h3 class="text-xl font-bold text-slate-700 mb-2">Belum ada wishlist</h3>
                     <p class="text-slate-500 font-medium mb-6">Mimpi beli mobil, rumah, atau kulkas baru? Catat di sini.</p>
                     <button onclick="openWishlistModal()" class="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/30">
-                        <i class='bx bx-plus text-lg'></i> Buat Wishlist Pertama
+                        <i class='bx bx-plus text-lg' aria-hidden="true"></i> Buat wishlist pertama
                     </button>
                 </div>
             </section>
@@ -901,26 +942,23 @@
             <!-- ==================== RIWAYAT BULANAN TAB ==================== -->
             <section id="tab-monthhistory" class="tab-content hide space-y-6">
                 <header class="mb-2">
-                    <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Riwayat <span class="text-gradient">Bulanan</span></h2>
-                    <p class="text-slate-500 text-sm md:text-base mt-2 font-medium">Sisa uang yang tersimpan tiap bulan setelah tutup buku.</p>
+                    <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Riwayat bulanan</h2>
+                    <p class="text-slate-500 text-sm md:text-base mt-2 font-medium">Sisa uang tiap periode gajian setelah tutup buku.</p>
                 </header>
 
                 <!-- Total Tersimpan -->
                 <div class="glass-panel rounded-2xl p-5 md:p-6 flex items-center justify-between">
                     <div>
-                        <p class="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest font-bold mb-1.5">Total Sisa Tersimpan</p>
-                        <p id="monthHistoryTotal" class="text-2xl md:text-3xl font-black text-emerald-600 tracking-tight">Rp 0</p>
-                    </div>
-                    <div class="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100">
-                        <i class='bx bx-wallet text-3xl'></i>
+                        <p class="text-sm text-slate-600 font-bold mb-1.5">Total sisa semua periode</p>
+                        <p id="monthHistoryTotal" class="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">Rp 0</p>
                     </div>
                 </div>
 
                 <!-- Bar Chart -->
                 <div class="glass-panel p-5 md:p-7 rounded-3xl">
-                    <h3 class="text-lg md:text-xl font-bold mb-6 text-slate-800">Tren <span class="text-slate-400 font-medium">Sisa Bulanan</span></h3>
+                    <h3 class="text-lg md:text-xl font-bold mb-6 text-slate-800">Sisa tiap periode</h3>
                     <div class="relative h-56 md:h-72 w-full">
-                        <canvas id="monthHistoryChart"></canvas>
+                        <canvas id="monthHistoryChart" role="img" aria-label="Grafik sisa uang tiap periode yang sudah ditutup"></canvas>
                     </div>
                 </div>
 
@@ -932,8 +970,8 @@
                     <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100 mb-5 shadow-inner">
                         <span class="text-5xl">📅</span>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-700 mb-2">Belum Ada Riwayat</h3>
-                    <p class="text-slate-500 font-medium">Setiap tanggal 26, tutup buku bulan akan tersimpan di sini.</p>
+                    <h3 class="text-xl font-bold text-slate-700 mb-2">Belum ada riwayat</h3>
+                    <p class="text-slate-600 font-medium">Setiap gajian (tanggal 25), periode sebelumnya bisa ditutup dan ringkasannya tersimpan di sini.</p>
                 </div>
             </section>
 
@@ -945,7 +983,7 @@
                         <div class="inline-flex items-center justify-center w-16 h-16 bg-amber-50 rounded-2xl mb-4 text-amber-500 shadow-sm border border-amber-100">
                             <span class="text-3xl">🐣</span>
                         </div>
-                        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800 mb-2">Panduan <span class="text-gradient">Gampang</span></h2>
+                        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800 mb-2">Panduan gampang</h2>
                         <p class="text-slate-500 text-sm font-medium">Baca pelan-pelan ya. Ini gampang kok! 😊</p>
                     </header>
 
@@ -1003,22 +1041,22 @@
                             <div class="flex gap-3">
                                 <div class="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-500 text-white font-black flex items-center justify-center text-sm">1</div>
                                 <div>
-                                    <p class="font-bold text-slate-800 text-sm">Kalau dapat uang (gaji) 👉 tekan tombol hijau <span class="text-emerald-600">"Input Pemasukan"</span></p>
+                                    <p class="font-bold text-slate-800 text-sm">Kalau dapat uang (gaji) 👉 di Beranda tekan <span class="text-emerald-700">"Catat pemasukan"</span></p>
                                     <p class="text-slate-500 text-xs font-medium mt-1">Tulis tanggal, jumlah uangnya, terus tekan Simpan. Selesai!</p>
                                 </div>
                             </div>
                             <div class="flex gap-3">
                                 <div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-white font-black flex items-center justify-center text-sm">2</div>
                                 <div>
-                                    <p class="font-bold text-slate-800 text-sm">Kalau belanja / bayar sesuatu 👉 tekan tombol biru <span class="text-primary">"Catat Pengeluaran"</span></p>
-                                    <p class="text-slate-500 text-xs font-medium mt-1">Pilih tanggal, tulis jumlahnya, pilih untuk apa (makan, listrik, dll), Simpan.</p>
+                                    <p class="font-bold text-slate-800 text-sm">Kalau bayar tagihan rutin 👉 tekan <span class="text-emerald-700">"Bayar"</span> di daftar tagihan Beranda</p>
+                                    <p class="text-slate-500 text-xs font-medium mt-1">Belanja di luar tagihan rutin? Tekan tombol biru <span class="text-primary">"Catat pengeluaran"</span>, tulis jumlahnya, pilih untuk apa, Simpan.</p>
                                 </div>
                             </div>
                             <div class="flex gap-3">
                                 <div class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-700 text-white font-black flex items-center justify-center text-sm">3</div>
                                 <div>
                                     <p class="font-bold text-slate-800 text-sm">Lihat sisa uang 👉 buka <span class="text-slate-700">"Beranda"</span></p>
-                                    <p class="text-slate-500 text-xs font-medium mt-1">Angka besar di atas itu <b>sisa uangmu bulan ini</b>. Gampang kan?</p>
+                                    <p class="text-slate-500 text-xs font-medium mt-1">Angka besar di atas itu <b>sisa uangmu sampai gajian berikutnya</b> (periode tanggal 25 sampai 24). Gampang kan?</p>
                                 </div>
                             </div>
                         </div>
@@ -1028,13 +1066,13 @@
                     <div class="glass-panel rounded-3xl p-6">
                         <div class="flex items-center gap-3 mb-4">
                             <span class="text-3xl">✨</span>
-                            <h3 class="text-lg font-extrabold text-slate-800">Menu Lain yang Berguna</h3>
+                            <h3 class="text-lg font-extrabold text-slate-800">Menu lain yang berguna</h3>
                         </div>
                         <div class="space-y-3">
                             <div class="flex gap-3 items-start">
                                 <span class="text-2xl flex-shrink-0">📋</span>
                                 <div>
-                                    <p class="font-bold text-slate-800 text-sm">Planner Rutin</p>
+                                    <p class="font-bold text-slate-800 text-sm">Planner rutin</p>
                                     <p class="text-slate-500 text-xs font-medium mt-0.5">Daftar tagihan yang bayar tiap bulan (listrik, wifi, cicilan). Tinggal tekan "Bayar" kalau sudah dibayar.</p>
                                 </div>
                             </div>
@@ -1048,8 +1086,8 @@
                             <div class="flex gap-3 items-start">
                                 <span class="text-2xl flex-shrink-0">📅</span>
                                 <div>
-                                    <p class="font-bold text-slate-800 text-sm">Tutup Buku (Tanggal 26)</p>
-                                    <p class="text-slate-500 text-xs font-medium mt-0.5">Setiap tanggal 26, aplikasi tanya "mau tutup bulan?". Tekan ya, nanti sisa uangmu disimpan, terus mulai bulan baru dari nol.</p>
+                                    <p class="font-bold text-slate-800 text-sm">Tutup buku (saat gajian, tanggal 25)</p>
+                                    <p class="text-slate-500 text-xs font-medium mt-0.5">Setiap gajian, aplikasi tanya "mau tutup buku periode lalu?". Tekan ya, ringkasannya disimpan di Riwayat bulanan. Periode baru otomatis mulai dari nol.</p>
                                 </div>
                             </div>
                         </div>
@@ -1061,7 +1099,7 @@
                         <p class="font-extrabold text-slate-800 text-base mb-1">Sudah paham? Kamu hebat! 👏</p>
                         <p class="text-slate-500 text-sm font-medium">Tenang, salah tulis bisa dihapus atau diperbaiki kapan saja. Coba pelan-pelan ya.</p>
                         <button onclick="switchTab('beranda')" class="mt-5 inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/30 active:scale-95 transition-transform">
-                            <i class='bx bx-home'></i> Mulai Pakai Sekarang
+                            <i class='bx bx-home' aria-hidden="true"></i> Mulai pakai sekarang
                         </button>
                     </div>
                 </div>
@@ -1074,12 +1112,12 @@
         <form id="formPlannerCrud" class="glass-panel w-full max-w-md bg-white rounded-t-[2rem] md:rounded-3xl p-6 md:p-8 shadow-2xl border border-slate-100 transform transition-transform animate-[translate-y_0.3s_ease-out]">
             <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 md:hidden"></div>
             
-            <h3 class="text-2xl font-extrabold mb-6 text-slate-800 tracking-tight" id="modalPlannerCrudTitle">Tambah Tagihan</h3>
+            <h3 class="text-2xl font-extrabold mb-6 text-slate-800 tracking-tight" id="modalPlannerCrudTitle">Tambah tagihan</h3>
             <input type="hidden" id="crudPlannerId">
             
             <div class="space-y-5">
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Grup Utama</label>
+                    <label class="block text-xs font-bold text-slate-500 mb-2">Grup utama</label>
                     <select id="crudPlannerGroup" required class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-semibold text-sm appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] bg-[length:1em] shadow-sm">
                         <option value="INSTALLMENT">Cicilan</option>
                         <option value="BILLS">Tagihan</option>
@@ -1089,19 +1127,23 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Nama Tagihan / Item</label>
+                    <label class="block text-xs font-bold text-slate-500 mb-2">Nama tagihan / item</label>
                     <input type="text" id="crudPlannerName" required placeholder="Contoh: KPR, Listrik..." class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-semibold text-sm shadow-sm">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Estimasi Biaya (Rp)</label>
+                    <label class="block text-xs font-bold text-slate-500 mb-2">Estimasi biaya (Rp)</label>
                     <input type="text" inputmode="numeric" id="crudPlannerAmount" required placeholder="Contoh: 150.000" class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-extrabold text-lg shadow-sm placeholder-slate-300" oninput="formatInputCurrency(this)">
                 </div>
             </div>
             
             <div class="mt-8 flex gap-3">
                 <button type="button" onclick="closePlannerModal()" class="flex-1 bg-white hover:bg-slate-50 text-slate-700 font-bold py-3.5 rounded-xl transition-colors text-sm border border-slate-200 shadow-sm">Batal</button>
-                <button type="submit" class="flex-1 bg-primary hover:bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transition-colors text-sm">Simpan</button>
+                <button type="submit" class="flex-1 bg-primary hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transition-colors text-sm">Simpan</button>
             </div>
+            <!-- Hapus sengaja di sini (bukan di kartu, di sebelah tombol Bayar) supaya tidak salah pencet -->
+            <button type="button" id="btnDeletePlannerItem" onclick="deletePlannerItem(document.getElementById('crudPlannerId').value)" class="hidden w-full mt-4 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors flex items-center justify-center gap-2">
+                <i class='bx bx-trash text-lg' aria-hidden="true"></i> Hapus tagihan ini
+            </button>
         </form>
     </div>
 
@@ -1112,9 +1154,9 @@
             
             <div class="text-center mb-8">
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-500 mb-4 shadow-sm">
-                    <i class='bx bx-check-shield text-4xl'></i>
+                    <i class='bx bx-check-shield text-4xl' aria-hidden="true"></i>
                 </div>
-                <h3 class="text-2xl font-black text-slate-800 tracking-tight">Bayar Tagihan</h3>
+                <h3 class="text-2xl font-black text-slate-800 tracking-tight">Bayar tagihan</h3>
                 <p class="text-sm font-bold text-primary mt-1" id="payPlannerSubtitle">Item Name</p>
             </div>
             
@@ -1125,15 +1167,15 @@
             
             <div class="space-y-4">
                 <div class="relative">
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest text-center mb-3">Nominal Dibayar (Rp)</label>
+                    <label class="block text-xs font-bold text-slate-500 text-center mb-3">Nominal dibayar (Rp)</label>
                     <input type="text" inputmode="numeric" id="payPlannerAmount" required class="w-full modern-input bg-slate-50 border-slate-200 rounded-2xl px-4 py-5 text-4xl font-black text-slate-800 text-center tracking-tight shadow-inner" oninput="formatInputCurrency(this)">
-                    <p class="text-center text-[10px] text-slate-400 font-bold mt-3 uppercase tracking-wide">Ubah nominal jika bayar sebagian</p>
+                    <p class="text-center text-xs text-slate-500 font-bold mt-3">Ubah nominal jika bayar sebagian</p>
                 </div>
             </div>
             
             <div class="mt-8 flex gap-3">
                 <button type="button" onclick="closePayModal()" class="w-1/3 bg-white hover:bg-slate-50 text-slate-600 font-bold py-3.5 rounded-xl border border-slate-200 transition-colors text-sm shadow-sm">Batal</button>
-                <button type="submit" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-colors text-sm tracking-wide">Konfirmasi</button>
+                <button type="submit" class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-colors text-sm">Bayar</button>
             </div>
         </form>
     </div>
@@ -1143,25 +1185,25 @@
         <form id="formIncomeAdd" class="glass-panel w-full max-w-md bg-white rounded-t-[2rem] md:rounded-3xl p-6 md:p-8 shadow-2xl border border-slate-100">
             <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 md:hidden"></div>
 
-            <h3 class="text-2xl font-extrabold mb-6 text-slate-800 tracking-tight" id="incomeModalTitle">Catat Pemasukan</h3>
+            <h3 class="text-2xl font-extrabold mb-6 text-slate-800 tracking-tight" id="incomeModalTitle">Catat pemasukan</h3>
             <div class="space-y-5">
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Tanggal Terima</label>
+                    <label class="block text-xs font-bold text-slate-500 mb-2">Tanggal terima</label>
                     <input type="date" id="incomeDate" required class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-semibold text-sm shadow-sm">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Nominal (Rp)</label>
+                    <label class="block text-xs font-bold text-slate-500 mb-2">Nominal (Rp)</label>
                     <input type="text" inputmode="numeric" id="incomeAmount" required placeholder="0" class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-extrabold text-lg shadow-sm placeholder-slate-300" oninput="formatInputCurrency(this)">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Sumber Pemasukan</label>
+                    <label class="block text-xs font-bold text-slate-500 mb-2">Sumber pemasukan</label>
                     <input type="text" id="incomeDesc" placeholder="Contoh: Gaji bulanan, Bonus..." class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-semibold text-sm shadow-sm placeholder-slate-300">
                 </div>
             </div>
 
             <div class="mt-8 flex gap-3">
                 <button type="button" onclick="closeIncomeModal()" class="flex-1 bg-white hover:bg-slate-50 text-slate-700 font-bold py-3.5 rounded-xl transition-colors text-sm border border-slate-200 shadow-sm">Batal</button>
-                <button type="submit" class="flex-1 bg-gradient-to-r from-emerald-400 to-emerald-500 hover:opacity-90 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-colors text-sm">Simpan</button>
+                <button type="submit" class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-colors text-sm">Simpan</button>
             </div>
         </form>
     </div>
@@ -1171,16 +1213,16 @@
         <form id="formWishlist" class="glass-panel w-full max-w-md bg-white rounded-t-[2rem] md:rounded-3xl p-6 md:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
             <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 md:hidden"></div>
 
-            <h3 class="text-2xl font-extrabold mb-6 text-slate-800 tracking-tight" id="wishlistModalTitle">Tambah Wishlist</h3>
+            <h3 class="text-2xl font-extrabold mb-6 text-slate-800 tracking-tight" id="wishlistModalTitle">Tambah wishlist</h3>
             <input type="hidden" id="wishlistId">
 
             <div class="space-y-5">
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Nama Impian</label>
+                    <label class="block text-xs font-bold text-slate-500 mb-2">Nama impian</label>
                     <input type="text" id="wishlistName" required placeholder="Contoh: Beli Mobil, Servis Motor..." class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-semibold text-sm shadow-sm placeholder-slate-300">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Prioritas</label>
+                    <label class="block text-xs font-bold text-slate-500 mb-2">Prioritas</label>
                     <div class="grid grid-cols-3 gap-2">
                         <label class="cursor-pointer">
                             <input type="radio" name="wishlistPriority" value="penting" class="peer sr-only" checked>
@@ -1207,16 +1249,16 @@
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Target (Rp)</label>
+                        <label class="block text-xs font-bold text-slate-500 mb-2">Target (Rp)</label>
                         <input type="text" inputmode="numeric" id="wishlistTarget" required placeholder="0" class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-extrabold text-base shadow-sm placeholder-slate-300" oninput="formatInputCurrency(this)">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Terkumpul (Rp)</label>
+                        <label class="block text-xs font-bold text-slate-500 mb-2">Terkumpul (Rp)</label>
                         <input type="text" inputmode="numeric" id="wishlistCurrent" placeholder="0" class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-extrabold text-base shadow-sm placeholder-slate-300" oninput="formatInputCurrency(this)">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Catatan (opsional)</label>
+                    <label class="block text-xs font-bold text-slate-500 mb-2">Catatan (opsional)</label>
                     <input type="text" id="wishlistNotes" placeholder="Contoh: Toyota Avanza second..." class="w-full modern-input rounded-xl px-4 py-3.5 text-slate-800 font-semibold text-sm shadow-sm placeholder-slate-300">
                 </div>
             </div>
@@ -1228,74 +1270,79 @@
         </form>
     </div>
 
-    <!-- Modal Tambah Dana Wishlist -->
+    <!-- Modal Tambah dana Wishlist -->
     <div id="modalWishlistFund" class="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm hidden flex items-end md:items-center justify-center p-0 md:p-4">
         <form id="formWishlistFund" class="glass-panel w-full max-w-sm bg-white rounded-t-[2rem] md:rounded-3xl p-6 md:p-8 shadow-2xl border border-slate-100">
             <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 md:hidden"></div>
 
             <div class="text-center mb-8">
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-500 mb-4 shadow-sm">
-                    <i class='bx bx-coin-stack text-4xl'></i>
+                    <i class='bx bx-coin-stack text-4xl' aria-hidden="true"></i>
                 </div>
-                <h3 class="text-2xl font-black text-slate-800 tracking-tight">Tambah Dana</h3>
+                <h3 class="text-2xl font-black text-slate-800 tracking-tight">Tambah dana</h3>
                 <p class="text-sm font-bold text-primary mt-1" id="wishlistFundSubtitle">Nama Item</p>
             </div>
 
             <input type="hidden" id="wishlistFundId">
             <div class="space-y-4">
                 <div class="relative">
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest text-center mb-3">Nominal Ditambah (Rp)</label>
+                    <label class="block text-xs font-bold text-slate-500 text-center mb-3">Nominal ditambah (Rp)</label>
                     <input type="text" inputmode="numeric" id="wishlistFundAmount" required class="w-full modern-input bg-slate-50 border-slate-200 rounded-2xl px-4 py-5 text-4xl font-black text-slate-800 text-center tracking-tight shadow-inner" oninput="formatInputCurrency(this)">
                 </div>
             </div>
 
             <div class="mt-8 flex gap-3">
                 <button type="button" onclick="closeWishlistFundModal()" class="w-1/3 bg-white hover:bg-slate-50 text-slate-600 font-bold py-3.5 rounded-xl border border-slate-200 transition-colors text-sm shadow-sm">Batal</button>
-                <button type="submit" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-colors text-sm tracking-wide">Tambah</button>
+                <button type="submit" class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-colors text-sm">Tambah</button>
             </div>
         </form>
     </div>
 
-    <!-- Modal Monthly Close (Tutup Buku Tanggal 26) -->
+    <!-- Modal Monthly Close (Tutup buku Tanggal 26) -->
     <div id="modalMonthClose" class="fixed inset-0 z-[200] bg-slate-900/50 backdrop-blur-sm hidden flex items-end md:items-center justify-center p-0 md:p-4">
         <div class="glass-panel w-full max-w-md bg-white rounded-t-[2rem] md:rounded-3xl shadow-2xl border border-slate-100 max-h-[92vh] overflow-y-auto">
             <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-4 md:hidden"></div>
             <div class="p-6 md:p-8">
                 <div class="text-center mb-6">
                     <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 border border-blue-100 text-primary mb-4 shadow-sm">
-                        <i class='bx bx-calendar-check text-4xl'></i>
+                        <i class='bx bx-calendar-check text-4xl' aria-hidden="true"></i>
                     </div>
-                    <h3 class="text-2xl font-black text-slate-800 tracking-tight">Tutup Buku Bulan</h3>
+                    <h3 class="text-2xl font-black text-slate-800 tracking-tight">Tutup buku periode</h3>
                     <p class="text-sm font-bold text-primary mt-1" id="monthCloseMonthLabel">Juli 2026</p>
                 </div>
 
                 <!-- Ringkasan -->
                 <div class="space-y-2.5 mb-5">
-                    <div class="flex justify-between items-center bg-emerald-50 px-4 py-3 rounded-xl border border-emerald-100">
-                        <span class="text-xs font-bold text-emerald-700 uppercase tracking-widest">💵 Pemasukan</span>
-                        <span class="font-black text-emerald-700 text-sm" id="monthCloseMasuk">Rp 0</span>
+                    <!-- Netral: merah hanya untuk masalah, bukan untuk label "Pengeluaran" -->
+                    <div class="flex justify-between items-center bg-slate-50 px-4 py-3 rounded-xl border border-slate-200">
+                        <span class="text-sm font-semibold text-slate-600">Pemasukan</span>
+                        <span class="font-bold text-slate-800 text-sm" id="monthCloseMasuk">Rp 0</span>
                     </div>
-                    <div class="flex justify-between items-center bg-rose-50 px-4 py-3 rounded-xl border border-rose-100">
-                        <span class="text-xs font-bold text-rose-600 uppercase tracking-widest">💸 Pengeluaran</span>
-                        <span class="font-black text-rose-600 text-sm" id="monthCloseKeluar">Rp 0</span>
+                    <div class="flex justify-between items-center bg-slate-50 px-4 py-3 rounded-xl border border-slate-200">
+                        <span class="text-sm font-semibold text-slate-600">Pengeluaran</span>
+                        <span class="font-bold text-slate-800 text-sm" id="monthCloseKeluar">Rp 0</span>
                     </div>
-                    <div class="flex justify-between items-center bg-sky-50 px-4 py-3 rounded-xl border border-sky-100">
-                        <span class="text-xs font-bold text-sky-600 uppercase tracking-widest">🏦 Tabungan</span>
-                        <span class="font-black text-sky-600 text-sm" id="monthCloseNabung">Rp 0</span>
+                    <div class="flex justify-between items-center bg-slate-50 px-4 py-3 rounded-xl border border-slate-200">
+                        <span class="text-sm font-semibold text-slate-600">Tabungan</span>
+                        <span class="font-bold text-slate-800 text-sm" id="monthCloseNabung">Rp 0</span>
                     </div>
-                    <div class="flex justify-between items-center bg-gradient-to-r from-blue-50 to-emerald-50 px-4 py-4 rounded-xl border border-blue-100 mt-1">
-                        <span class="text-sm font-black text-slate-700 uppercase tracking-widest">🎯 Sisa Bulan</span>
-                        <span class="font-black text-slate-900 text-lg" id="monthCloseSisa">Rp 0</span>
+                    <div class="flex justify-between items-center px-4 py-4 rounded-xl border-2 border-slate-300 mt-1">
+                        <span class="text-sm font-extrabold text-slate-800">Sisa periode</span>
+                        <span class="font-extrabold text-slate-900 text-lg" id="monthCloseSisa">Rp 0</span>
                     </div>
                 </div>
 
+                <p id="monthCloseWarn" class="hidden text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 font-semibold mb-4 leading-relaxed">
+                    Pemasukan periode ini masih Rp 0. Kalau gaji sudah diterima, catat dulu supaya sisanya benar.
+                    <button type="button" onclick="recordIncomeForClosingPeriod()" class="block mt-2 font-bold text-blue-700 underline underline-offset-4">Catat gaji dulu</button>
+                </p>
                 <p class="text-xs text-slate-500 font-medium text-center mb-5 leading-relaxed px-2">
-                    Sisa bulan ini akan disimpan di <b>Riwayat Bulanan</b>, lalu pemasukan direset ke Rp 0 untuk mulai bulan baru.
+                    Ringkasan periode ini disimpan di <b>Riwayat bulanan</b>. Data transaksinya tetap ada; periode baru otomatis mulai dari Rp 0.
                 </p>
 
                 <div class="flex gap-3">
-                    <button type="button" onclick="closeMonthCloseModal()" class="flex-1 bg-white hover:bg-slate-50 text-slate-600 font-bold py-3.5 rounded-xl border border-slate-200 transition-colors text-sm shadow-sm">Nanti Saja</button>
-                    <button type="button" onclick="confirmMonthClose()" class="flex-1 bg-primary hover:bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/30 transition-colors text-sm">Tutup Buku</button>
+                    <button type="button" onclick="closeMonthCloseModal()" class="flex-1 bg-white hover:bg-slate-50 text-slate-600 font-bold py-3.5 rounded-xl border border-slate-200 transition-colors text-sm shadow-sm">Nanti saja</button>
+                    <button type="button" onclick="confirmMonthClose()" class="flex-1 bg-primary hover:bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/30 transition-colors text-sm">Tutup buku</button>
                 </div>
             </div>
         </div>
@@ -1305,7 +1352,7 @@
     <div id="modalConfirm" class="fixed inset-0 z-[300] bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center p-4">
         <div class="glass-panel w-full max-w-sm bg-white rounded-[2rem] p-8 shadow-2xl border border-slate-100 text-center">
             <div id="confirmIcon" class="w-20 h-20 rounded-full mx-auto bg-rose-50 text-rose-500 flex items-center justify-center mb-5 border border-rose-100 shadow-sm">
-                <i class='bx bx-error text-4xl'></i>
+                <i class='bx bx-error text-4xl' aria-hidden="true"></i>
             </div>
             <h3 id="confirmTitle" class="text-2xl font-black text-slate-800 mb-2">Konfirmasi</h3>
             <p id="confirmMessage" class="text-slate-500 text-sm font-semibold mb-8 leading-relaxed">Apakah Anda yakin?</p>
@@ -1321,32 +1368,32 @@
         <div class="glass-panel w-full max-w-lg bg-white rounded-t-[2rem] md:rounded-3xl border border-slate-100 shadow-2xl flex flex-col" style="max-height:85vh">
             <div class="flex items-center justify-between p-6 border-b border-slate-100 flex-shrink-0">
                 <div>
-                    <h3 class="text-2xl font-black text-slate-800">Ringkasan Planner</h3>
-                    <p class="text-xs font-bold text-primary mt-1 uppercase tracking-widest" id="previewMonthLabel">Juni 2026</p>
+                    <h3 class="text-2xl font-black text-slate-800">Ringkasan planner</h3>
+                    <p class="text-xs font-bold text-primary mt-1" id="previewMonthLabel">Juni 2026</p>
                 </div>
-                <button onclick="closePlannerPreview()" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors bg-white border border-slate-200 shadow-sm">
-                    <i class='bx bx-x text-2xl'></i>
+                <button onclick="closePlannerPreview()" aria-label="Tutup ringkasan" class="w-11 h-11 flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors bg-white border border-slate-200 shadow-sm">
+                    <i class='bx bx-x text-2xl' aria-hidden="true"></i>
                 </button>
             </div>
             
             <div class="p-5 border-b border-slate-100 grid grid-cols-3 gap-3 flex-shrink-0 bg-slate-50/50">
                 <div class="bg-white rounded-2xl p-4 text-center border border-slate-200 shadow-sm">
-                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Estimasi</p>
+                    <p class="text-xs font-bold text-slate-500">Estimasi</p>
                     <p class="font-black text-slate-800 text-sm md:text-base mt-1.5" id="pvTotalEstimasi">Rp 0</p>
                 </div>
                 <div class="bg-emerald-50 rounded-2xl p-4 text-center border border-emerald-100 shadow-sm">
-                    <p class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Lunas</p>
+                    <p class="text-xs font-bold text-emerald-600">Lunas</p>
                     <p class="font-black text-emerald-500 text-sm md:text-base mt-1.5" id="pvLunas">0 item</p>
                 </div>
                 <div class="bg-rose-50 rounded-2xl p-4 text-center border border-rose-100 shadow-sm">
-                    <p class="text-[9px] font-bold text-rose-500 uppercase tracking-widest">Belum</p>
+                    <p class="text-xs font-bold text-rose-500">Belum</p>
                     <p class="font-black text-rose-500 text-sm md:text-base mt-1.5" id="pvBelum">0 item</p>
                 </div>
             </div>
             
             <div class="px-6 pb-4 pt-4 flex-shrink-0">
-                <div class="flex justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                    <span>Progress Pembayaran</span>
+                <div class="flex justify-between text-xs font-bold text-slate-500 mb-2">
+                    <span>Progres pembayaran</span>
                     <span id="pvPercent" class="text-primary">0%</span>
                 </div>
                 <div class="w-full bg-slate-100 rounded-full h-3 border border-slate-200 overflow-hidden shadow-inner">
@@ -1361,11 +1408,16 @@
     </div>
 
     <!-- Notification Toast -->
-    <div id="toast" class="fixed bottom-[90px] md:bottom-6 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-auto md:right-6 bg-white border border-slate-200 text-slate-800 px-5 py-3 rounded-2xl shadow-xl shadow-slate-200/50 transform translate-y-20 opacity-0 transition-all duration-400 z-[500] flex items-center gap-3 w-max max-w-[90vw]">
-        <div class="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100" id="toastIconBg">
-            <i class='bx bx-check font-bold text-xl' id="toastIcon"></i>
+    <!-- bottom-[112px]: di atas navigasi bawah (±94px), supaya toast tidak menutupi tab bar -->
+    <div id="toast" role="status" aria-live="polite" class="fixed bottom-[112px] md:bottom-6 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-auto md:right-6 bg-white border border-slate-200 text-slate-800 pl-4 pr-2 py-2 rounded-2xl shadow-xl shadow-slate-200/50 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-400 z-[500] flex items-center gap-3 w-max max-w-[92vw]">
+        <div class="w-8 h-8 flex-shrink-0 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100" id="toastIconBg">
+            <i class='bx bx-check font-bold text-xl' id="toastIcon" aria-hidden="true"></i>
         </div>
-        <span id="toastMsg" class="font-bold text-sm tracking-wide">Tersimpan!</span>
+        <span id="toastMsg" class="font-bold text-sm py-1.5">Tersimpan!</span>
+        <button id="toastAction" type="button" class="hidden min-h-[44px] px-3 text-sm font-bold text-blue-700 rounded-lg hover:bg-blue-50"></button>
+        <button id="toastClose" type="button" aria-label="Tutup pesan" class="hidden w-11 h-11 flex items-center justify-center text-slate-500 rounded-lg hover:bg-slate-100">
+            <i class='bx bx-x text-2xl' aria-hidden="true"></i>
+        </button>
     </div>
 
     <script src="main.js"></script>
