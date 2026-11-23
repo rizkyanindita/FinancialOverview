@@ -144,6 +144,7 @@ Helper baru: `formatRpShort()`, plugin `barValueLabels`, dan `zeroLineGrid`.
 | Scroll content not hidden behind fixed bars | Padding bawah dinaikkan supaya konten tidak tertutup navigasi bawah |
 | Stable Interaction States | Umpan balik saat tombol ditekan (sedikit lebih gelap, tanpa menggeser layout) |
 | — | Toast yang tersembunyi tidak lagi menghalangi tap (`pointer-events-none`) |
+| Contrast Readability (High) + `color-dark-mode` | Header tabel Planner, baris grup, ringkasan, dan bar sticky di mode gelap sebelumnya abu terang dengan teks abu terang (varian `bg-slate-50/80`, `/50`, `/95` tidak ikut remap). Sekarang gelap, kontras teks 6,3:1 |
 
 ## 8. Yang sengaja tidak diubah / sisa pekerjaan
 

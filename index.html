@@ -138,6 +138,11 @@
         /* Backgrounds */
         html.dark .bg-white { background-color: #1e293b !important; }
         html.dark .bg-slate-50 { background-color: #172033 !important; }
+        /* Varian transparan (bg-slate-50/80 dst.) tidak kena aturan di atas → header tabel Planner
+           tetap abu terang + teks abu terang di mode gelap. Teks slate-500 (#94a3b8) di #172033 = 6,3:1 (AA). */
+        html.dark .bg-slate-50\/80,
+        html.dark .bg-slate-50\/50 { background-color: #172033 !important; }
+        html.dark .bg-slate-50\/95 { background-color: rgba(15, 23, 42, 0.95) !important; } /* bar sticky Planner (HP) */
         html.dark .bg-slate-100 { background-color: #263449 !important; }
         html.dark .bg-slate-200 { background-color: #334155 !important; }
         html.dark .bg-slate-700,
@@ -151,8 +156,26 @@
         html.dark .text-slate-700 { color: #e2e8f0 !important; }
         html.dark .text-slate-600 { color: #cbd5e1 !important; }
         html.dark .text-slate-500 { color: #94a3b8 !important; }
-        html.dark .text-slate-500 { color: #94a3b8 !important; }
         html.dark .text-slate-300 { color: #cbd5e1 !important; }
+
+        /* Kartu pilihan (radio .peer + div: kategori, tujuan tabungan, prioritas wishlist).
+           Remap dark mode di atas memakai !important, jadi kelas peer-checked:* selalu kalah →
+           pilihan tampak tidak berubah. Status terpilih dibuat eksplisit & menang di dua mode:
+           cincin 2px warna kategori + label ikut berwarna. */
+        input.peer:checked + div {
+            box-shadow: 0 0 0 2px currentColor !important;
+            border-color: transparent !important;
+        }
+        input.peer:checked + div span,
+        input.peer:checked + div i { color: inherit !important; }
+        html.dark input.peer:checked + div {
+            background-color: rgba(147, 197, 253, 0.14) !important;
+            box-shadow: 0 0 0 2px #93c5fd !important; /* biru muda: terlihat juga untuk "Lainnya" */
+        }
+        html.dark input.peer:checked + div span,
+        html.dark input.peer:checked + div i { color: #f8fafc !important; }
+        /* Input radio disembunyikan (sr-only) → fokus keyboard ditampilkan di kartunya */
+        input.peer:focus-visible + div { outline: 3px solid #2563eb; outline-offset: 2px; }
         html.dark .hover\:text-slate-800:hover { color: #f1f5f9 !important; }
         html.dark .placeholder-slate-300::placeholder { color: #64748b !important; }
 
@@ -833,7 +856,7 @@
                         <!-- Deskripsi -->
                         <div class="relative z-10">
                             <label class="block text-xs md:text-sm font-bold text-slate-500 mb-3">Catatan / deskripsi</label>
-                            <input type="text" id="inpDesc" placeholder="Contoh: Beli makan siang, ongkos..." class="w-full modern-input rounded-xl px-5 py-4 text-slate-800 text-sm md:text-base placeholder-slate-300 shadow-sm font-medium">
+                            <input type="text" id="inpDesc" placeholder="Contoh: Beli makan siang, ongkos..." class="w-full modern-input rounded-xl px-5 py-4 text-slate-800 text-sm md:text-base placeholder-slate-300 shadow-sm font-medium" required>
                         </div>
 
                         <div class="pt-4 md:pt-6 flex flex-col md:flex-row gap-3 relative z-10">

@@ -1702,6 +1702,7 @@ function renderWeekly() {
     let totalWeek = 0;
     const dailySums = [0,0,0,0,0,0,0];
     const catSums = {};
+    const catItems = {}; // transaksi per kategori, supaya keterangan (deskripsi) ikut tampil
 
     expenses.forEach(ex => {
         if(ex.type !== 'pengeluaran') return; // Weekly tracking hanya untuk pengeluaran
@@ -1714,6 +1715,7 @@ function renderWeekly() {
             dailySums[dIdx - 1] += amt;
 
             catSums[ex.category] = (catSums[ex.category] || 0) + amt;
+            (catItems[ex.category] ||= []).push(ex);
         }
     });
 
@@ -1749,12 +1751,32 @@ function renderWeekly() {
     document.getElementById('weeklyChart').setAttribute('aria-label',
         `Pengeluaran per hari minggu ini: ${dailySums.map((v, i) => `${hari[i]} ${formatRp(v)}`).join(', ')}`);
 
+    // Teks dari user (keterangan) di-escape sebelum masuk innerHTML.
+    const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const listHtml = Object.entries(catSums).sort((a,b)=>b[1]-a[1]).map(([cat, amt]) => {
         const colorClass = catColors[cat] || catColors['Lainnya'];
+        // Rincian per transaksi: keterangan dari Input manual / nama tagihan Planner, tanggal, nominal.
+        const rows = catItems[cat]
+            .sort((a, b) => b.date.localeCompare(a.date))
+            .map(ex => {
+                const desc = (ex.desc && ex.desc !== '-') ? ex.desc.replace(/^\[Planner\]\s*/, '') : 'belum diisi keterangan';
+                const tgl = new Date(ex.date + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' });
+                return `
+                    <li class="flex items-start justify-between gap-3 py-2">
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-slate-800 break-words">${esc(desc)}</p>
+                            <p class="text-xs text-slate-500 font-medium">${tgl}${ex.plannerRef ? ' · dari Planner' : ''}</p>
+                        </div>
+                        <span class="text-sm font-bold text-slate-700 flex-shrink-0">${formatRp(ex.amount)}</span>
+                    </li>`;
+            }).join('');
         return `
-            <div class="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
-                <span class="px-3 py-1.5 text-sm font-bold rounded-lg border ${colorClass}">${cat}</span>
-                <span class="font-black text-slate-800">${formatRp(amt)}</span>
+            <div class="p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
+                <div class="flex justify-between items-center">
+                    <span class="px-3 py-1.5 text-sm font-bold rounded-lg border ${colorClass}">${cat}</span>
+                    <span class="font-black text-slate-800">${formatRp(amt)}</span>
+                </div>
+                <ul class="mt-2 divide-y divide-slate-100">${rows}</ul>
             </div>
         `;
     }).join('');
